@@ -25,7 +25,8 @@ describe('footballData transport', () => {
       fetchImpl,
     })
 
-    expect(capturedUrl).toContain('https://api.football-data.org/v4/matches')
+    expect(capturedUrl).toContain('/football-data/v4/matches')
+    expect(capturedUrl).not.toContain('https://api.football-data.org')
     // dateTo is exclusive at the API — we request one extra day
     expect(capturedUrl).toContain('dateFrom=2026-10-20')
     expect(capturedUrl).toContain('dateTo=2026-10-23')

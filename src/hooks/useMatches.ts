@@ -6,6 +6,7 @@ import {
   prefetchTomorrow,
   resetAgendaCache,
   type AgendaDeps,
+  type AgendaResult,
 } from '@/services/fixturesOrchestrator'
 import { todayInTunis } from '@/utils/timezone'
 
@@ -18,6 +19,8 @@ export type MatchesState = {
   selectedDateKey: string
   selectDate: (dateKey: string) => void
   scoredMatches: ScoredMatch[]
+  /** Non-blocking explanations when one provider contributed nothing. */
+  providerNotices: string[]
   isLoading: boolean
   error: MatchLoadError | null
   retry: () => void
@@ -31,7 +34,7 @@ export type MatchesState = {
 export function useMatches(deps?: AgendaDeps): MatchesState {
   const agendaDeps = deps ?? defaultAgendaDeps
   const [selectedDateKey, setSelectedDateKey] = useState(todayInTunis)
-  const [agendaByDate, setAgendaByDate] = useState<Record<string, ScoredMatch[]>>({})
+  const [agendaByDate, setAgendaByDate] = useState<Record<string, AgendaResult>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<MatchLoadError | null>(null)
 
@@ -74,7 +77,8 @@ export function useMatches(deps?: AgendaDeps): MatchesState {
   return {
     selectedDateKey,
     selectDate,
-    scoredMatches: agendaByDate[selectedDateKey] ?? [],
+    scoredMatches: agendaByDate[selectedDateKey]?.matches ?? [],
+    providerNotices: agendaByDate[selectedDateKey]?.providerNotices ?? [],
     isLoading,
     error,
     retry,

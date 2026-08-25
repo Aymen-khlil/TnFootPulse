@@ -18,6 +18,7 @@ function Home() {
     selectedDateKey,
     selectDate,
     scoredMatches,
+    providerNotices,
     isLoading,
     error,
     retry,
@@ -63,6 +64,16 @@ function Home() {
             scoredMatches={scoredMatches}
           />
         </div>
+
+        {providerNotices.length > 0 && !isLoading && (
+          <div role="status" className="mb-4 space-y-1">
+            {providerNotices.map((notice) => (
+              <p key={notice} className="text-sm text-amber-400/90">
+                ⓘ {notice}
+              </p>
+            ))}
+          </div>
+        )}
 
         {isLoading ? (
           <AgendaSkeleton />

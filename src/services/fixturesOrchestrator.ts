@@ -28,6 +28,12 @@ export const defaultAgendaDeps: AgendaDeps = {
   fetchApiFootball: (dateKey) => fetchApiFootballFixturesByDate({ dateKey }),
 }
 
+export type AgendaResult = {
+  matches: ScoredMatch[]
+  /** Non-blocking explanation when one provider contributed nothing. */
+  providerNotices: string[]
+}
+
 /**
  * Single orchestration point: date → both providers (respecting their
  * different capabilities/windows) → normalized merges → dedupe → score
@@ -40,18 +46,22 @@ export const defaultAgendaDeps: AgendaDeps = {
 export async function getAgendaForDate(
   dateKey: string,
   deps: AgendaDeps = defaultAgendaDeps,
-): Promise<ScoredMatch[]> {
+): Promise<AgendaResult> {
   return providerRequestCache.run(`agenda:${dateKey}`, async () => {
     const from = dateKey
     const to = shiftDateKey(dateKey, FOOTBALL_DATA_RANGE_DAYS - 1)
 
     const attempts: Array<Promise<Match[]>> = []
     const failures: unknown[] = []
+    const providerNotices: string[] = []
 
     const fdJob = deps
       .fetchFootballData({ from, to })
       .catch((error: unknown) => {
         failures.push(error)
+        providerNotices.push(
+          'European fixtures are unavailable right now (football-data.org).',
+        )
         return [] as Match[]
       })
     attempts.push(fdJob)
@@ -60,12 +70,15 @@ export async function getAgendaForDate(
     if (apiFootballWindowAllows(dateKey)) {
       afJob = deps.fetchApiFootball(dateKey).catch((error: unknown) => {
         // Free-plan future-date rejection: graceful no-op for this
-        // provider — never surfaced as an app error, never retried here.
+        // provider — expected behavior, not surfaced as a notice.
         if (error instanceof FootballApiError && error.code === 'plan-date-restricted') {
           warnDev('API-Football rejected the date as outside the free-plan window.')
           return [] as Match[]
         }
         failures.push(error)
+        providerNotices.push(
+          'Tunisian and other league fixtures may be incomplete right now.',
+        )
         return [] as Match[]
       })
       attempts.push(afJob)
@@ -87,13 +100,16 @@ export async function getAgendaForDate(
       )
     }
 
-    return combined
-      .map((match) => ({ match, priority: calculatePriority(match) }))
-      .sort(
-        (a, b) =>
-          b.priority.total - a.priority.total ||
-          a.match.kickoff.getTime() - b.match.kickoff.getTime(),
-      )
+    return {
+      matches: combined
+        .map((match) => ({ match, priority: calculatePriority(match) }))
+        .sort(
+          (a, b) =>
+            b.priority.total - a.priority.total ||
+            a.match.kickoff.getTime() - b.match.kickoff.getTime(),
+        ),
+      providerNotices,
+    }
   })
 }
 

@@ -5,7 +5,18 @@ import {
   footballDataCompetitionsParam,
 } from '@/data/competitions'
 
-const API_BASE = 'https://api.football-data.org/v4'
+const DIRECT_API_BASE = 'https://api.football-data.org/v4'
+
+/**
+ * football-data.org's CORS handling is origin-strict (it answers
+ * preflights with a fixed "http://localhost" allow-origin that does not
+ * match typical dev ports), so local development routes through the
+ * Vite proxy path ("/football-data") instead of calling directly.
+ */
+function apiBase(): string {
+  const useProxy = import.meta.env.VITE_FOOTBALL_DATA_USE_PROXY !== 'false'
+  return useProxy ? '/football-data/v4' : DIRECT_API_BASE
+}
 
 export type FootballDataErrorCode =
   | 'missing-token'
@@ -58,7 +69,7 @@ export async function fetchFootballDataMatchesInRange({
 
   const exclusiveTo = shiftDayKey(toKey, 1)
   const url =
-    `${API_BASE}/matches?dateFrom=${encodeURIComponent(fromKey)}` +
+    `${apiBase()}/matches?dateFrom=${encodeURIComponent(fromKey)}` +
     `&dateTo=${encodeURIComponent(exclusiveTo)}` +
     `&competitions=${encodeURIComponent(footballDataCompetitionsParam())}`
 
