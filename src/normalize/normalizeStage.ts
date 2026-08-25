@@ -9,7 +9,10 @@ import type { StageKind } from '@/types/football'
 export function normalizeStage(rawRound: string | undefined): StageKind {
   const round = (rawRound ?? '').toLowerCase()
 
-  if (!round) return 'league-match'
+  if (!round) {
+    warnUnrecognized(rawRound)
+    return 'league-match'
+  }
 
   if (/3rd place|third place/.test(round)) return 'knockout-round'
   if (/quarter/.test(round)) return 'quarter-final'

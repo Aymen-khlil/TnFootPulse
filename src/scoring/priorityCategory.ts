@@ -1,4 +1,15 @@
-import type { PriorityCategoryName } from '@/types/football'
+import type { PriorityCategoryName, StageKind } from '@/types/football'
+
+/** Shared display vocabulary for stages (scoring reasons + UI chips). */
+export const STAGE_LABELS: Record<StageKind, string> = {
+  final: 'Final',
+  'semi-final': 'Semi-final',
+  'quarter-final': 'Quarter-final',
+  'knockout-round': 'Knockout round',
+  playoff: 'Playoff',
+  'group-phase': 'Group stage',
+  'league-match': 'League match',
+}
 
 export type PriorityCategoryMeta = {
   name: PriorityCategoryName

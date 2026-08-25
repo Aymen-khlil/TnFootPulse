@@ -5,12 +5,21 @@ import type { FixturesTransport } from '@/cache/fixturesCache'
 
 const API_BASE = 'https://v3.football.api-sports.io'
 
-export class FootballApiError extends Error {
-  readonly cause?: unknown
+export type FootballApiErrorCode =
+  | 'missing-key'
+  | 'transport'
+  | 'http'
+  | 'invalid-response'
+  | 'rejected'
 
-  constructor(message: string, cause?: unknown) {
+export class FootballApiError extends Error {
+  readonly code: FootballApiErrorCode
+  override readonly cause?: unknown
+
+  constructor(code: FootballApiErrorCode, message: string, cause?: unknown) {
     super(message)
     this.name = 'FootballApiError'
+    this.code = code
     this.cause = cause
   }
 }
@@ -36,6 +45,7 @@ export async function fetchFixturesByDate({
 
   if (!key) {
     throw new FootballApiError(
+      'missing-key',
       'Missing API key. Set VITE_API_FOOTBALL_KEY in your .env file.',
     )
   }
@@ -49,17 +59,18 @@ export async function fetchFixturesByDate({
       headers: { 'x-apisports-key': key },
     })
   } catch (cause) {
-    throw new FootballApiError('Could not reach the football data service.', cause)
+    throw new FootballApiError('transport', 'Could not reach the football data service.', cause)
   }
 
   if (!response.ok) {
     throw new FootballApiError(
+      'http',
       `The football data service returned an error (${response.status}).`,
     )
   }
 
   const body = (await response.json().catch((cause: unknown) => {
-    throw new FootballApiError('The football data service sent an invalid response.', cause)
+    throw new FootballApiError('invalid-response', 'The football data service sent an invalid response.', cause)
   })) as ApiFixturesResponse
 
   assertNoApiErrors(body)
@@ -70,12 +81,12 @@ function assertNoApiErrors(body: ApiFixturesResponse): void {
   // The API signals plan/auth problems via its errors field.
   if (Array.isArray(body.errors)) {
     if (body.errors.length > 0) {
-      throw new FootballApiError(`API request rejected: ${JSON.stringify(body.errors)}`)
+      throw new FootballApiError('rejected', `API request rejected: ${JSON.stringify(body.errors)}`)
     }
     return
   }
   if (body.errors && Object.keys(body.errors).length > 0) {
-    throw new FootballApiError(`API request rejected: ${JSON.stringify(body.errors)}`)
+    throw new FootballApiError('rejected', `API request rejected: ${JSON.stringify(body.errors)}`)
   }
 }
 

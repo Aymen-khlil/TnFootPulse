@@ -16,8 +16,12 @@ function partsIn(
 
 /** Calendar day of an instant in Africa/Tunis, as YYYY-MM-DD. */
 export function tunisDateKey(date: Date): string {
-  return partsIn(date, { year: 'numeric', month: '2-digit', day: '2-digit' })
-    .year + '-' + partsIn(date, { year: 'numeric', month: '2-digit', day: '2-digit' }).month + '-' + partsIn(date, { year: 'numeric', month: '2-digit', day: '2-digit' }).day
+  const p = partsIn(date, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  return `${p.year}-${p.month}-${p.day}`
 }
 
 /** Minutes since Tunis midnight (0–1439) for an instant. */

@@ -1,3 +1,4 @@
+import { canonicalTeamName } from '@/data/teams'
 import { normalizeTeamName } from '@/utils/normalizeName'
 
 /**
@@ -24,8 +25,8 @@ const NORMALIZED_PAIRS: Array<readonly [string, string]> = RIVALRIES.map(
 
 /** True when the two clubs form one of the configured rivalries (either order). */
 export function isRivalry(teamAName: string, teamBName: string): boolean {
-  const a = normalizeTeamName(teamAName)
-  const b = normalizeTeamName(teamBName)
+  const a = normalizeTeamName(canonicalTeamName(teamAName))
+  const b = normalizeTeamName(canonicalTeamName(teamBName))
   return NORMALIZED_PAIRS.some(
     ([x, y]) => (a === x && b === y) || (a === y && b === x),
   )

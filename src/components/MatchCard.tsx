@@ -1,35 +1,43 @@
 import { Swords, Trophy } from 'lucide-react'
 import type { ScoredMatch } from '@/types/football'
+import { isRivalry } from '@/data/rivalries'
+import { STAGE_LABELS } from '@/scoring/priorityCategory'
 import { formatTunisTime } from '@/utils/timezone'
 import { Badge } from '@/components/ui/badge'
 import { LiveBadge } from './LiveBadge'
 import { PriorityBadge } from './PriorityBadge'
 import { competitionDisplayName } from '@/data/competitions'
 
-/** Short display-only chips derived from engine output (never recomputes scores). */
+/** Display-only chips from structured fields (never recomputes scores). */
 function matchChips(scored: ScoredMatch): string[] {
+  const { match, priority } = scored
   const chips: string[] = []
-  const contextReason = scored.priority.reasons.find((r) =>
-    /final|semi|quarter|knockout|playoff|group|league match|rivalry/i.test(r),
-  )
-  if (/rivalry/i.test(contextReason ?? '')) chips.push('Major rivalry')
-  if (scored.match.stage !== 'league-match') {
-    chips.push(
-      scored.match.stage === 'final'
-        ? 'Final'
-        : scored.match.stage === 'group-phase'
-          ? 'Group stage'
-          : scored.match.stage === 'semi-final'
-            ? 'Semi-final'
-            : scored.match.stage === 'quarter-final'
-              ? 'Quarter-final'
-              : scored.match.stage === 'playoff'
-                ? 'Playoff'
-                : 'Knockout',
-    )
+  if (isRivalry(match.homeTeam.name, match.awayTeam.name)) {
+    chips.push('Major rivalry')
   }
-  if (scored.priority.tunisiaTime >= 17) chips.push('Good Tunisia time')
+  if (match.stage !== 'league-match') {
+    chips.push(STAGE_LABELS[match.stage])
+  }
+  if (priority.tunisiaTime >= 17) {
+    chips.push('Good Tunisia time')
+  }
   return chips
+}
+
+/** Shared chip row for both card variants; `trophyFor` gets the trophy icon. */
+function ChipRow({ chips, trophyFor }: { chips: string[]; trophyFor?: string }) {
+  if (chips.length === 0) return null
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {chips.map((chip) => (
+        <Badge key={chip} variant="outline" className="gap-1 font-normal">
+          {chip === 'Major rivalry' && <Swords className="h-3 w-3" aria-hidden />}
+          {chip === trophyFor && <Trophy className="h-3 w-3" aria-hidden />}
+          {chip}
+        </Badge>
+      ))}
+    </div>
+  )
 }
 
 type MatchCardProps = {
@@ -39,6 +47,7 @@ type MatchCardProps = {
 
 function MatchCard({ scored, onSelect }: MatchCardProps) {
   const { match, priority } = scored
+  const chips = matchChips(scored)
   return (
     <button
       type="button"
@@ -72,18 +81,9 @@ function MatchCard({ scored, onSelect }: MatchCardProps) {
         {competitionDisplayName(match.competition)}
       </div>
 
-      {matchChips(scored).length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {matchChips(scored).map((chip) => (
-            <Badge key={chip} variant="outline" className="gap-1 font-normal">
-              {chip === 'Major rivalry' && <Swords className="h-3 w-3" aria-hidden />}
-              {chip}
-            </Badge>
-          ))}
-        </div>
-      )}
+      <ChipRow chips={chips} />
     </button>
   )
 }
 
-export { MatchCard, matchChips }
+export { MatchCard, matchChips, ChipRow }

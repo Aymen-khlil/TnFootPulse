@@ -4,7 +4,7 @@ import { clampCompetitionScore } from './competitionScore'
 import { teamScore } from './teamScore'
 import { contextScore } from './contextScore'
 import { timeScore, timeWindowLabel } from './timeScore'
-import { getPriorityCategory } from './priorityCategory'
+import { getPriorityCategory, STAGE_LABELS } from './priorityCategory'
 
 /**
  * The deterministic, explainable priority engine.
@@ -29,17 +29,13 @@ export function calculatePriority(match: Match): PriorityResult {
     context,
     tunisiaTime,
     category: getPriorityCategory(total),
-    reasons: buildReasons(match, rivalry),
+    reasons: [
+      `${match.competition.name} · +${competition}`,
+      `${teamDescriptor(match)} · +${teams}`,
+      `${contextDescriptor(match.stage, rivalry)} · +${context}`,
+      `${timeWindowLabel(match.tunisMinuteOfDay)} · +${tunisiaTime}`,
+    ],
   }
-}
-
-function buildReasons(match: Match, rivalry: boolean): string[] {
-  return [
-    `${match.competition.name} · +${clampCompetitionScore(match.competition.rating)}`,
-    `${teamDescriptor(match)} · +${teamScore(match.homeTeam, match.awayTeam)}`,
-    `${contextDescriptor(match, rivalry)} · +${contextScore(match.stage, rivalry)}`,
-    `${timeWindowLabel(match.tunisMinuteOfDay)} · +${timeScore(match.tunisMinuteOfDay)}`,
-  ]
 }
 
 function teamDescriptor({ homeTeam, awayTeam }: Match): string {
@@ -55,17 +51,8 @@ function teamDescriptor({ homeTeam, awayTeam }: Match): string {
   return `${quality} — ${homeTeam.name} vs ${awayTeam.name}`
 }
 
-function contextDescriptor(match: Match, rivalry: boolean): string {
-  const stageLabels: Record<Match['stage'], string> = {
-    final: 'Final',
-    'semi-final': 'Semi-final',
-    'quarter-final': 'Quarter-final',
-    'knockout-round': 'Knockout round',
-    playoff: 'Playoff',
-    'group-phase': 'Group stage',
-    'league-match': 'League match',
-  }
-  const parts = [stageLabels[match.stage]]
+function contextDescriptor(stage: Match['stage'], rivalry: boolean): string {
+  const parts = [STAGE_LABELS[stage]]
   if (rivalry) parts.push('Major rivalry')
   return parts.join(' + ')
 }

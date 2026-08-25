@@ -6,19 +6,14 @@ import { cn } from '@/lib/utils'
 type PriorityBadgeProps = {
   category: PriorityCategoryName
   total: number
-  size?: 'sm' | 'lg'
   className?: string
 }
 
-function PriorityBadge({ category, total, size = 'sm', className }: PriorityBadgeProps) {
+function PriorityBadge({ category, total, className }: PriorityBadgeProps) {
   const meta = priorityCategoryMeta(category)
   return (
     <Badge
-      className={cn(
-        meta.badgeClass,
-        size === 'lg' ? 'px-3 py-1 text-sm' : 'text-xs',
-        className,
-      )}
+      className={cn(meta.badgeClass, 'text-xs', className)}
     >
       <span aria-hidden>{meta.emoji}</span>
       <span>{total}</span>

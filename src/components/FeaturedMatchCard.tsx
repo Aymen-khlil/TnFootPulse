@@ -1,10 +1,10 @@
-import { Clock, Swords, Trophy } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import type { ScoredMatch } from '@/types/football'
 import { formatTunisTime } from '@/utils/timezone'
 import { competitionDisplayName } from '@/data/competitions'
 import { LiveBadge } from './LiveBadge'
 import { PriorityLabel } from './PriorityBadge'
-import { matchChips } from './MatchCard'
+import { ChipRow, matchChips } from './MatchCard'
 
 type FeaturedMatchCardProps = {
   scored: ScoredMatch
@@ -44,21 +44,10 @@ function FeaturedMatchCard({ scored, onSelect }: FeaturedMatchCardProps) {
         <PriorityLabel priority={priority} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        <span className="inline-flex items-center gap-1 rounded-full bg-elevated px-2.5 py-0.5 text-xs text-muted">
-          <Trophy className="h-3 w-3" aria-hidden />
-          {match.competition.name}
-        </span>
-        {matchChips(scored).map((chip) => (
-          <span
-            key={chip}
-            className="inline-flex items-center gap-1 rounded-full bg-elevated px-2.5 py-0.5 text-xs text-muted"
-          >
-            {chip === 'Major rivalry' && <Swords className="h-3 w-3" aria-hidden />}
-            {chip}
-          </span>
-        ))}
-      </div>
+      <ChipRow
+        chips={[match.competition.name, ...matchChips(scored)]}
+        trophyFor={match.competition.name}
+      />
 
       <p className="mt-4 text-sm font-medium text-primary group-hover:underline">
         Why is this important? →

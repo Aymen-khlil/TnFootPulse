@@ -33,11 +33,11 @@ describe('normalizeStage', () => {
     warn.mockRestore()
   })
 
-  it('defaults empty or missing rounds silently to a league match', () => {
+  it('warns and degrades empty or missing rounds to a league match', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(normalizeStage('')).toBe('league-match')
     expect(normalizeStage(undefined)).toBe('league-match')
-    expect(warn).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(2)
     warn.mockRestore()
   })
 })

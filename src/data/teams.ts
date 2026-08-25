@@ -133,3 +133,22 @@ for (const config of TEAM_CONFIGS) {
 export function teamRatingByName(name: string): number {
   return RATING_BY_NORMALIZED_NAME.get(normalizeTeamName(name)) ?? UNKNOWN_TEAM_RATING
 }
+
+const CANONICAL_BY_NORMALIZED_NAME = new Map<string, string>()
+for (const config of TEAM_CONFIGS) {
+  const canonical = normalizeTeamName(config.name)
+  if (!CANONICAL_BY_NORMALIZED_NAME.has(canonical)) {
+    CANONICAL_BY_NORMALIZED_NAME.set(canonical, config.name)
+  }
+  for (const alias of config.aliases ?? []) {
+    const normalizedAlias = normalizeTeamName(alias)
+    if (!CANONICAL_BY_NORMALIZED_NAME.has(normalizedAlias)) {
+      CANONICAL_BY_NORMALIZED_NAME.set(normalizedAlias, config.name)
+    }
+  }
+}
+
+/** Canonical dataset name for any known name/alias; unchanged when unknown. */
+export function canonicalTeamName(name: string): string {
+  return CANONICAL_BY_NORMALIZED_NAME.get(normalizeTeamName(name)) ?? name
+}

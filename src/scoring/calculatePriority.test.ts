@@ -137,6 +137,27 @@ describe('calculatePriority — worked examples from SPEC.md §11', () => {
     expect(result.total).toBe(60)
     expect(result.category).toBe('if-you-have-time')
   })
+
+  it('E6: an Eredivisie prime-time mid-table clash scores 62 (SPEC §14 case 5)', () => {
+    const result = calculatePriority(
+      match({
+        homeTeam: team('Ajax', 76),
+        awayTeam: team('PSV', 77),
+        competition: {
+          id: '88',
+          name: 'Eredivisie',
+          country: 'Netherlands',
+          rating: 18,
+        },
+        stage: 'league-match',
+      }),
+    )
+    // 18 + round(76.5 × 0.25)=19 + 5 + 20 = 62
+    expect(result.competition).toBe(18)
+    expect(result.teams).toBe(19)
+    expect(result.total).toBe(62)
+    expect(result.category).toBe('if-you-have-time')
+  })
 })
 
 describe('calculatePriority — guarantees', () => {

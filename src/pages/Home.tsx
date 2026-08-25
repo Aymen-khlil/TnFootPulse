@@ -67,7 +67,7 @@ function Home() {
         {isLoading ? (
           <AgendaSkeleton />
         ) : error ? (
-          <ErrorState message={error} onRetry={retry} />
+          <ErrorState error={error} onRetry={retry} />
         ) : scoredMatches.length === 0 ? (
           <EmptyState variant="no-matches" />
         ) : filtered.length === 0 ? (
