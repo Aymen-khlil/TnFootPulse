@@ -48,8 +48,9 @@ export async function getAgendaForDate(
   deps: AgendaDeps = defaultAgendaDeps,
 ): Promise<AgendaResult> {
   return providerRequestCache.run(`agenda:${dateKey}`, async () => {
-    const from = dateKey
-    const to = shiftDateKey(dateKey, FOOTBALL_DATA_RANGE_DAYS - 1)
+    // Week-aligned fd.org window: any two dates inside the same 7-day
+    // block share ONE cached ranged request instead of refetching.
+    const { from, to } = footballDataWindowFor(dateKey)
 
     const attempts: Array<Promise<Match[]>> = []
     const failures: unknown[] = []
@@ -91,7 +92,12 @@ export async function getAgendaForDate(
 
     const combined = mergeMatches(fdMatches, afMatches)
 
-    if (combined.length === 0 && failures.length === attempts.length && failures.length > 0) {
+    // HARD RULE: an agenda for a date contains ONLY that Tunisian
+    // calendar day's matches — the fd.org range exists purely as a
+    // network-efficiency device, never as extra display content.
+    const dayCombined = combined.filter((m) => m.tunisDateKey === dateKey)
+
+    if (dayCombined.length === 0 && failures.length === attempts.length && failures.length > 0) {
       throw failures[0]
     }
     if (failures.length > 0) {
@@ -101,7 +107,7 @@ export async function getAgendaForDate(
     }
 
     return {
-      matches: combined
+      matches: dayCombined
         .map((match) => ({ match, priority: calculatePriority(match) }))
         .sort(
           (a, b) =>
@@ -120,6 +126,19 @@ export function prefetchTomorrow(deps: AgendaDeps = defaultAgendaDeps): void {
 
 export function resetAgendaCache(): void {
   providerRequestCache.clear()
+}
+
+/**
+ * Week-aligned fd.org window containing `dateKey`: anchored on today,
+ * stepped in whole 7-day blocks so consecutive selected dates reuse the
+ * same cached ranged request (today+tomorrow share block 0, etc.).
+ */
+function footballDataWindowFor(dateKey: string): { from: string; to: string } {
+  const today = todayInTunis()
+  const offset = daysBetween(today, dateKey)
+  const index = Math.floor(offset / FOOTBALL_DATA_RANGE_DAYS)
+  const from = shiftDateKey(today, index * FOOTBALL_DATA_RANGE_DAYS)
+  return { from, to: shiftDateKey(from, FOOTBALL_DATA_RANGE_DAYS - 1) }
 }
 
 /**
