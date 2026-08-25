@@ -28,6 +28,14 @@ function Home() {
   const [competitionFilter, setCompetitionFilter] = useState('all')
   const [detail, setDetail] = useState<ScoredMatch | null>(null)
 
+  const worthCount = useMemo(
+    () =>
+      scoredMatches.filter((s) =>
+        ['must-watch', 'high-priority'].includes(s.priority.category)
+      ).length,
+    [scoredMatches],
+  )
+
   const filtered = useMemo(
     () =>
       scoredMatches.filter(({ priority, match }) =>
@@ -45,6 +53,12 @@ function Home() {
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Football Tonight
           </h1>
+          {worthCount > 0 && (
+            <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-primary">
+              <span aria-hidden>⚡</span>
+              {worthCount} match{worthCount === 1 ? '' : 'es'} worth watching
+            </p>
+          )}
           <p className="mt-1 text-sm text-muted">
             All times are Tunisia time
           </p>

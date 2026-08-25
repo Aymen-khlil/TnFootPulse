@@ -1,57 +1,82 @@
-import { Clock } from 'lucide-react'
+import { Clock, Zap } from 'lucide-react'
 import type { ScoredMatch } from '@/types/football'
+import { STAGE_LABELS } from '@/scoring/priorityCategory'
 import { formatTunisTime } from '@/utils/timezone'
-import { competitionDisplayName } from '@/data/competitions'
+import { PulseGauge } from '@/components/ui/gauge'
+import { ComponentRows } from './PriorityBreakdown'
 import { LiveBadge } from './LiveBadge'
-import { PriorityLabel } from './PriorityBadge'
-import { ChipRow, matchChips } from './MatchCard'
+import { TeamLogo } from './TeamLogo'
+import { shortCompetitionLabel } from './MatchFilters'
 
 type FeaturedMatchCardProps = {
   scored: ScoredMatch
   onSelect: (scored: ScoredMatch) => void
 }
 
-/** Prominent treatment for the day's MUST WATCH fixtures. */
+/** MUST-WATCH treatment: crimson border + Intelligence Report panel (ADR-0001). */
 function FeaturedMatchCard({ scored, onSelect }: FeaturedMatchCardProps) {
   const { match, priority } = scored
+  const stageLabel =
+    match.stage !== 'league-match' ? STAGE_LABELS[match.stage].toUpperCase() : null
+
   return (
     <button
       type="button"
       onClick={() => onSelect(scored)}
-      className="group w-full rounded-xl border border-primary/30 bg-gradient-to-br from-card to-elevated p-5 text-left shadow-lg shadow-primary/10 transition-colors hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+      className="group w-full rounded-xl border border-crimson/50 bg-gradient-to-br from-card to-elevated p-5 text-left shadow-lg shadow-crimson/5 transition-colors hover:border-crimson/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {match.status === 'live' ? (
-            <LiveBadge minuteElapsed={match.minuteElapsed} />
-          ) : (
-            <span className="flex items-center gap-1.5 text-lg font-semibold">
-              <Clock className="h-4 w-4 text-pulse" aria-hidden />
-              <time>{formatTunisTime(match.kickoff)}</time>
+      <div className="flex flex-col gap-5 sm:flex-row">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-border bg-elevated px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-foreground">
+              ★ {shortCompetitionLabel(match.competition)}
+              {stageLabel && <span className="text-muted"> · {stageLabel}</span>}
             </span>
-          )}
+            {match.status === 'live' ? (
+              <LiveBadge minuteElapsed={match.minuteElapsed} />
+            ) : (
+              <span className="flex items-center gap-1 text-xs font-medium text-muted">
+                <Clock className="h-3.5 w-3.5" aria-hidden />
+                {formatTunisTime(match.kickoff)} (Tunisia Time)
+              </span>
+            )}
+            {priority.tunisiaTime >= 20 && (
+              <span className="flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">
+                <Zap className="h-3 w-3" aria-hidden />
+                PRIME TIME
+              </span>
+            )}
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <TeamLogo src={match.homeTeam.logo} name={match.homeTeam.name} size={44} />
+              <p className="truncate text-2xl font-bold leading-tight">
+                {match.homeTeam.name}
+              </p>
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">vs</p>
+            <div className="flex items-center gap-3">
+              <TeamLogo src={match.awayTeam.logo} name={match.awayTeam.name} size={44} />
+              <p className="truncate text-2xl font-bold leading-tight">
+                {match.awayTeam.name}
+              </p>
+            </div>
+          </div>
         </div>
-        <span className="text-xs font-bold uppercase tracking-widest text-muted">
-          {competitionDisplayName(match.competition)}
-        </span>
-      </div>
 
-      <div className="mt-4 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xl font-bold leading-tight sm:text-2xl">{match.homeTeam.name}</p>
-          <p className="text-xl font-bold leading-tight sm:text-2xl">{match.awayTeam.name}</p>
+        <div className="shrink-0 rounded-xl border border-border bg-elevated/60 p-4 sm:w-60">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+            Intelligence Report
+          </p>
+          <div className="mt-3 flex justify-center">
+            <PulseGauge value={priority.total} category={priority.category} size={96} />
+          </div>
+          <div className="mt-4 border-t border-border pt-3">
+            <ComponentRows priority={priority} />
+          </div>
         </div>
-        <PriorityLabel priority={priority} />
       </div>
-
-      <ChipRow
-        chips={[match.competition.name, ...matchChips(scored)]}
-        trophyFor={match.competition.name}
-      />
-
-      <p className="mt-4 text-sm font-medium text-primary group-hover:underline">
-        Why is this important? →
-      </p>
     </button>
   )
 }

@@ -1,15 +1,8 @@
 import { useMemo } from 'react'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import type { PriorityCategoryName, ScoredMatch } from '@/types/football'
+import type { ScoredMatch } from '@/types/football'
 import { PRIORITY_CATEGORY_ORDER, priorityCategoryMeta } from '@/scoring/priorityCategory'
 import { competitionDisplayName } from '@/data/competitions'
+import { cn } from '@/lib/utils'
 
 export const PRIORITY_FILTER_VALUES = [
   'all',
@@ -26,6 +19,41 @@ type MatchFiltersProps = {
   scoredMatches: ScoredMatch[]
 }
 
+function FilterGroupLabel({ children }: { children: string }) {
+  return (
+    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted">
+      {children}
+    </p>
+  )
+}
+
+function Pill({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+        selected
+          ? 'border-primary/60 bg-primary/10 text-primary'
+          : 'border-border text-muted hover:border-border hover:text-foreground',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Labeled pill groups: priority bands + that day's competitions (ADR-0001). */
 function MatchFilters({
   priorityFilter,
   onPriorityFilterChange,
@@ -34,7 +62,7 @@ function MatchFilters({
   scoredMatches,
 }: MatchFiltersProps) {
   const competitionOptions = useMemo(() => {
-    const byId = new Map<string, { id: string; name: string; country?: string; rating: number }>()
+    const byId = new Map<string, { id: string; name: string; country?: string }>()
     for (const { match } of scoredMatches) {
       if (!byId.has(match.competition.id)) byId.set(match.competition.id, match.competition)
     }
@@ -42,59 +70,57 @@ function MatchFilters({
   }, [scoredMatches])
 
   return (
-    <div className="space-y-3">
-      <Tabs
-        value={priorityFilter}
-        onValueChange={(v) => onPriorityFilterChange(v as PriorityFilter)}
-      >
-        <TabsList className="h-auto max-w-full flex-wrap justify-start sm:flex-nowrap sm:overflow-x-auto">
-          <TabsTrigger value="all">All</TabsTrigger>
+    <div className="space-y-4">
+      <div>
+        <FilterGroupLabel>Priority</FilterGroupLabel>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Pill selected={priorityFilter === 'all'} onClick={() => onPriorityFilterChange('all')}>
+            All
+          </Pill>
           {PRIORITY_CATEGORY_ORDER.filter((c) => c !== 'low-priority').map((category) => {
             const meta = priorityCategoryMeta(category)
             return (
-              <TabsTrigger key={category} value={category}>
-                <span aria-hidden>{meta.emoji}</span>
-                <span className="hidden md:inline">{meta.label}</span>
-                <span className="md:hidden">{shortLabel(category)}</span>
-              </TabsTrigger>
+              <Pill
+                key={category}
+                selected={priorityFilter === category}
+                onClick={() => onPriorityFilterChange(category as PriorityFilter)}
+              >
+                <span aria-hidden className="mr-1">{meta.emoji}</span>
+                {meta.label}
+              </Pill>
             )
           })}
-        </TabsList>
-      </Tabs>
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">Competition</span>
-        <Select value={competitionFilter} onValueChange={onCompetitionFilterChange}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="All competitions" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All competitions</SelectItem>
-            {competitionOptions.map((comp) => (
-              <SelectItem key={comp.id} value={comp.id}>
-                {competitionDisplayName(comp)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        </div>
       </div>
+
+      {competitionOptions.length > 0 && (
+        <div>
+          <FilterGroupLabel>Competitions</FilterGroupLabel>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Pill selected={competitionFilter === 'all'} onClick={() => onCompetitionFilterChange('all')}>
+              All
+            </Pill>
+            {competitionOptions.map((comp) => (
+              <Pill
+                key={comp.id}
+                selected={competitionFilter === comp.id}
+                onClick={() => onCompetitionFilterChange(comp.id)}
+              >
+                {shortCompetitionLabel(comp)}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function shortLabel(category: PriorityCategoryName): string {
-  switch (category) {
-    case 'must-watch':
-      return 'Must'
-    case 'high-priority':
-      return 'High'
-    case 'worth-watching':
-      return 'Worth'
-    case 'if-you-have-time':
-      return 'Maybe'
-    default:
-      return category
-  }
+/** Compact chip label: well-known abbreviations, country disambiguation otherwise. */
+function shortCompetitionLabel(comp: { id: string; name: string; country?: string }): string {
+  if (comp.id === 'ucl') return 'UCL'
+  if (comp.id === 'tunisian-ligue-1') return 'Tunisian Ligue 1'
+  return competitionDisplayName(comp)
 }
 
-export { MatchFilters }
+export { MatchFilters, shortCompetitionLabel }

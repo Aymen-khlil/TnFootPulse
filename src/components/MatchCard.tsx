@@ -1,43 +1,47 @@
-import { Swords, Trophy } from 'lucide-react'
+import { Trophy } from 'lucide-react'
 import type { ScoredMatch } from '@/types/football'
-import { isRivalry } from '@/data/rivalries'
-import { STAGE_LABELS } from '@/scoring/priorityCategory'
+import { priorityCategoryMeta } from '@/scoring/priorityCategory'
+import { timeWindowLabel } from '@/scoring/timeScore'
 import { formatTunisTime } from '@/utils/timezone'
-import { Badge } from '@/components/ui/badge'
-import { LiveBadge } from './LiveBadge'
-import { PriorityBadge } from './PriorityBadge'
 import { competitionDisplayName } from '@/data/competitions'
+import { cn } from '@/lib/utils'
+import { LiveBadge } from './LiveBadge'
+import { TeamLogo } from './TeamLogo'
 
-/** Display-only chips from structured fields (never recomputes scores). */
-function matchChips(scored: ScoredMatch): string[] {
-  const { match, priority } = scored
-  const chips: string[] = []
-  if (isRivalry(match.homeTeam.name, match.awayTeam.name)) {
-    chips.push('Major rivalry')
-  }
-  if (match.stage !== 'league-match') {
-    chips.push(STAGE_LABELS[match.stage])
-  }
-  if (priority.tunisiaTime >= 17) {
-    chips.push('Good Tunisia time')
-  }
-  return chips
+/** Band-colored score chip (ADR-0001: color = category). */
+function ScoreChip({ scored }: { scored: ScoredMatch }) {
+  const meta = priorityCategoryMeta(scored.priority.category)
+  return (
+    <span
+      className={cn(
+        'rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums',
+        meta.badgeClass,
+      )}
+    >
+      {scored.priority.total}
+      <span className="sr-only"> Pulse Score</span>
+    </span>
+  )
 }
 
-/** Shared chip row for both card variants; `trophyFor` gets the trophy icon. */
-function ChipRow({ chips, trophyFor }: { chips: string[]; trophyFor?: string }) {
-  if (chips.length === 0) return null
-  return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {chips.map((chip) => (
-        <Badge key={chip} variant="outline" className="gap-1 font-normal">
-          {chip === 'Major rivalry' && <Swords className="h-3 w-3" aria-hidden />}
-          {chip === trophyFor && <Trophy className="h-3 w-3" aria-hidden />}
-          {chip}
-        </Badge>
-      ))}
-    </div>
-  )
+/** Compact display-only signals (team quality + viewing time), from engine output values. */
+function teamQualityLabel(teams: number): string {
+  if (teams >= 23) return 'Elite teams'
+  if (teams >= 20) return 'Strong sides'
+  if (teams >= 15) return 'Solid teams'
+  return 'Modest teams'
+}
+
+function timeShortLabel(minuteOfDay: number, score: number): string | null {
+  if (score <= 0) return null
+  const label = timeWindowLabel(minuteOfDay)
+  if (label === 'Prime Tunisia time') return 'Prime time'
+  if (label === 'Good evening slot') return 'Good time'
+  if (label === 'Night kickoff') return 'Night'
+  if (label === 'Late night' || label === 'Very late night') return 'Late night'
+  if (label === 'Early afternoon' || label === 'Late afternoon') return 'Afternoon'
+  if (label === 'Morning kickoff') return 'Morning'
+  return null // Overnight
 }
 
 type MatchCardProps = {
@@ -47,43 +51,78 @@ type MatchCardProps = {
 
 function MatchCard({ scored, onSelect }: MatchCardProps) {
   const { match, priority } = scored
-  const chips = matchChips(scored)
+  const isLive = match.status === 'live'
+  const chips = [
+    `${teamQualityLabel(priority.teams)} +${priority.teams}`,
+    timeShortLabel(match.tunisMinuteOfDay, priority.tunisiaTime) &&
+      `+${priority.tunisiaTime}`,
+  ].filter(Boolean) as string[]
+
   return (
     <button
       type="button"
       onClick={() => onSelect(scored)}
-      className="group w-full rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(
+        'group w-full rounded-xl border bg-card p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isLive
+          ? 'border-primary/40 hover:border-primary/70'
+          : 'border-border hover:border-primary/40 hover:bg-elevated',
+      )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted">
-          {match.status === 'live' ? (
+        <div className="flex items-center gap-2 text-xs font-medium text-muted">
+          {isLive ? (
             <LiveBadge minuteElapsed={match.minuteElapsed} />
           ) : (
             <>
-              <span aria-hidden>🕗</span>
+              <span className="font-semibold uppercase tracking-wide">
+                {match.competition.name}
+              </span>
+              <span aria-hidden>·</span>
               <time>{formatTunisTime(match.kickoff)}</time>
             </>
           )}
         </div>
-        <PriorityBadge category={priority.category} total={priority.total} />
+        <ScoreChip scored={scored} />
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between gap-3">
-        <p className="text-base font-semibold leading-tight">{match.homeTeam.name}</p>
-        <p className="text-sm font-semibold tabular-nums text-muted">
-          {match.score ? `${match.score.home} – ${match.score.away}` : ''}
-        </p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2.5">
+            <TeamLogo src={match.homeTeam.logo} name={match.homeTeam.name} size={28} />
+            <p className="truncate text-base font-semibold leading-tight">
+              {match.homeTeam.name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <TeamLogo src={match.awayTeam.logo} name={match.awayTeam.name} size={28} />
+            <p className="truncate text-base font-semibold leading-tight">
+              {match.awayTeam.name}
+            </p>
+          </div>
+        </div>
+        {isLive && match.score && (
+          <div className="flex flex-col items-end text-xl font-bold tabular-nums">
+            <span>{match.score.home}</span>
+            <span>{match.score.away}</span>
+          </div>
+        )}
       </div>
-      <p className="text-base font-semibold leading-tight">{match.awayTeam.name}</p>
 
-      <div className="mt-2 flex items-center gap-1.5 text-xs text-muted">
+      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted">
         <Trophy className="h-3.5 w-3.5" aria-hidden />
         {competitionDisplayName(match.competition)}
       </div>
 
-      <ChipRow chips={chips} />
+      {chips.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-emerald-400/80">
+          {chips.map((chip) => (
+            <span key={chip}>{chip}</span>
+          ))}
+        </div>
+      )}
     </button>
   )
 }
 
-export { MatchCard, matchChips, ChipRow }
+export { MatchCard }

@@ -27,7 +27,7 @@ function MatchList({ scoredMatches, onSelect }: MatchListProps) {
                 <span aria-hidden>{meta.emoji}</span> {meta.label}
               </h2>
               <span className="text-xs text-muted">
-                {meta.min}–{meta.max}
+                ({meta.min}-{meta.max})
               </span>
             </div>
 

@@ -1,6 +1,17 @@
 import type { PriorityCategoryName, StageKind } from '@/types/football'
 
-/** Shared display vocabulary for stages (scoring reasons + UI chips). */
+export type PriorityCategoryMeta = {
+  name: PriorityCategoryName
+  emoji: string
+  label: string
+  min: number
+  max: number
+  /** Badge/pill styling per category; color = category (ADR-0001). */
+  badgeClass: string
+  /** Accent text/stroke color for gauges, score chips and numbers. */
+  accentTextClass: string
+}
+
 export const STAGE_LABELS: Record<StageKind, string> = {
   final: 'Final',
   'semi-final': 'Semi-final',
@@ -9,16 +20,6 @@ export const STAGE_LABELS: Record<StageKind, string> = {
   playoff: 'Playoff',
   'group-phase': 'Group stage',
   'league-match': 'League match',
-}
-
-export type PriorityCategoryMeta = {
-  name: PriorityCategoryName
-  emoji: string
-  label: string
-  min: number
-  max: number
-  /** Badge styling per category; priority colors outrank competition colors. */
-  badgeClass: string
 }
 
 export const PRIORITY_CATEGORY_ORDER: PriorityCategoryName[] = [
@@ -37,8 +38,8 @@ export const PRIORITY_CATEGORIES: Record<PriorityCategoryName, PriorityCategoryM
       label: 'Must Watch',
       min: 90,
       max: 100,
-      badgeClass:
-        'border-transparent bg-gradient-to-r from-primary to-pulse text-white',
+      badgeClass: 'border-transparent bg-crimson text-white',
+      accentTextClass: 'text-red-400',
     },
     'high-priority': {
       name: 'high-priority',
@@ -46,7 +47,8 @@ export const PRIORITY_CATEGORIES: Record<PriorityCategoryName, PriorityCategoryM
       label: 'High Priority',
       min: 80,
       max: 89,
-      badgeClass: 'border-transparent bg-primary/90 text-white',
+      badgeClass: 'border-transparent bg-amber-500/90 text-amber-950',
+      accentTextClass: 'text-amber-400',
     },
     'worth-watching': {
       name: 'worth-watching',
@@ -54,7 +56,8 @@ export const PRIORITY_CATEGORIES: Record<PriorityCategoryName, PriorityCategoryM
       label: 'Worth Watching',
       min: 70,
       max: 79,
-      badgeClass: 'border-transparent bg-amber-500/90 text-black',
+      badgeClass: 'border-transparent bg-emerald-500/90 text-emerald-950',
+      accentTextClass: 'text-emerald-400',
     },
     'if-you-have-time': {
       name: 'if-you-have-time',
@@ -62,7 +65,8 @@ export const PRIORITY_CATEGORIES: Record<PriorityCategoryName, PriorityCategoryM
       label: 'If You Have Time',
       min: 55,
       max: 69,
-      badgeClass: 'border-transparent bg-sky-800 text-sky-100',
+      badgeClass: 'border-transparent bg-slate-700 text-slate-100',
+      accentTextClass: 'text-slate-300',
     },
     'low-priority': {
       name: 'low-priority',
@@ -71,6 +75,7 @@ export const PRIORITY_CATEGORIES: Record<PriorityCategoryName, PriorityCategoryM
       min: 0,
       max: 54,
       badgeClass: 'border-border bg-elevated text-muted',
+      accentTextClass: 'text-zinc-500',
     },
   }
 

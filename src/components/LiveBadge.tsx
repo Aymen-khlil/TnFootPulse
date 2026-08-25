@@ -5,6 +5,7 @@ type LiveBadgeProps = {
   className?: string
 }
 
+/** Live = emerald (ADR-0001): green signals in-play/positive. */
 function LiveBadge({ minuteElapsed, className }: LiveBadgeProps) {
   return (
     <span
