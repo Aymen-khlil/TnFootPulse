@@ -34,12 +34,16 @@ npm run build   # typecheck + production build
 
 ### CORS note
 
-The transport calls `https://v3.football.api-sports.io` directly from the
-browser, sending **only** the `x-apisports-key` header (the API rejects
-preflights carrying anything else). If direct calls fail empirically, enable
-the prepared dev-server proxy block in the Vite config and point the service's
-base URL at `/football-api` — the same seam a future serverless proxy would
-occupy. See SPEC.md §17 for the verify-before-coding checklist.
+**Verified working directly (2026-08-25):** the API answers browser
+preflights with `access-control-allow-origin: *` and whitelists
+`x-apisports-key`, so no proxy is needed for local development — the app
+calls `https://v3.football.api-sports.io` straight from the browser,
+sending **only** that single header (anything else triggers preflight
+rejections). The prepared dev-server proxy block in the Vite config stays
+as the seam for a future serverless proxy at public-deployment time.
+Free plan also enforces a per-minute limit of 10 requests (`x-ratelimit-limit`)
+on top of the daily 100 — well above this app's ~2 requests per load.
+See SPEC.md §17 for the verify-before-coding checklist.
 
 ## Architecture in one line
 
