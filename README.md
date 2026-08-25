@@ -58,12 +58,18 @@ behind a server-side/serverless proxy.
 
 ### CORS note
 
-**Verified working directly (2026-08-25):** both providers answer browser
-calls with `access-control-allow-origin: *` — API-Football whitelists
-`x-apisports-key`, football-data.org whitelists `X-Auth-Token` — so no proxy
-is needed for local development. Send **only** those single headers (extra
-headers trigger preflight rejections). The prepared dev-server proxy block
-in the Vite config stays as the seam for a future serverless proxy.
+**API-Football** answers browser calls with `access-control-allow-origin: *`
+(whitelisting `x-apisports-key`) — direct calls verified working 2026-08-25.
+
+**football-data.org is origin-strict**: its preflight pins
+`Access-Control-Allow-Origin` to a fixed `http://localhost`, which does not
+match typical dev ports (`localhost:5173`) and fails in browsers even though
+curl works. Local development therefore routes fd.org through the **Vite
+dev-server proxy** (`/football-data → api.football-data.org`, configured in
+the Vite config; toggle via `VITE_FOOTBALL_DATA_USE_PROXY`). The client still
+sends its own `X-Auth-Token` through the proxy — the same seam a future
+serverless proxy would occupy. Send only the single documented auth header
+per provider; anything extra triggers preflight rejections.
 API-Football's free plan also enforces a per-minute limit of 10 requests
 on top of the daily 100. See SPEC.md §17 for the verify-before-coding checklist.
 
