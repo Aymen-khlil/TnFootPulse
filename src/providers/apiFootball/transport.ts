@@ -1,22 +1,24 @@
 import type { ApiFixturesResponse } from '@/types/api'
-import { normalizeFixtures } from '@/normalize/normalizeFixtures'
+import type { Match } from '@/types/football'
+import { normalizeApiFootballFixtures } from './normalize'
 import { TUNIS_TIMEZONE } from '@/utils/timezone'
-import type { FixturesTransport } from '@/cache/fixturesCache'
 
 const API_BASE = 'https://v3.football.api-sports.io'
 
-export type FootballApiErrorCode =
+export type ApiFootballErrorCode =
   | 'missing-key'
   | 'transport'
   | 'http'
   | 'invalid-response'
   | 'rejected'
+  /** Free-plan future-date rejection ("Free plans do not have access to this date...") */
+  | 'plan-date-restricted'
 
 export class FootballApiError extends Error {
-  readonly code: FootballApiErrorCode
+  readonly code: ApiFootballErrorCode
   override readonly cause?: unknown
 
-  constructor(code: FootballApiErrorCode, message: string, cause?: unknown) {
+  constructor(code: ApiFootballErrorCode, message: string, cause?: unknown) {
     super(message)
     this.name = 'FootballApiError'
     this.code = code
@@ -26,27 +28,30 @@ export class FootballApiError extends Error {
 
 export type FetchFixturesOptions = {
   dateKey: string
-  /** Overrides the env-provided key (used by tests and future proxy seam). */
   apiKey?: string
   fetchImpl?: typeof fetch
 }
 
 /**
- * The single API touchpoint. GET-only, one request per Tunis calendar
+ * API-Football transport. GET-only, one request per Tunis calendar
  * date, kickoffs pre-converted via the timezone parameter. Sends ONLY
  * the whitelisted auth header — the API rejects preflights otherwise.
+ *
+ * The free plan rejects out-of-window dates with an explanatory error;
+ * that rejection is surfaced as the typed 'plan-date-restricted' code so
+ * callers can degrade gracefully instead of retrying pointlessly.
  */
-export async function fetchFixturesByDate({
+export async function fetchApiFootballFixturesByDate({
   dateKey,
   apiKey,
   fetchImpl = fetch,
-}: FetchFixturesOptions): Promise<ReturnType<typeof normalizeFixtures>> {
+}: FetchFixturesOptions): Promise<Match[]> {
   const key = apiKey ?? import.meta.env.VITE_API_FOOTBALL_KEY
 
   if (!key) {
     throw new FootballApiError(
       'missing-key',
-      'Missing API key. Set VITE_API_FOOTBALL_KEY in your .env file.',
+      'Missing API-Football key. Set VITE_API_FOOTBALL_KEY in your .env file.',
     )
   }
 
@@ -74,22 +79,28 @@ export async function fetchFixturesByDate({
   })) as ApiFixturesResponse
 
   assertNoApiErrors(body)
-  return normalizeFixtures(body)
+  return normalizeApiFootballFixtures(body)
 }
 
 function assertNoApiErrors(body: ApiFixturesResponse): void {
   // The API signals plan/auth problems via its errors field.
   if (Array.isArray(body.errors)) {
-    if (body.errors.length > 0) {
-      throw new FootballApiError('rejected', `API request rejected: ${JSON.stringify(body.errors)}`)
-    }
+    if (body.errors.length > 0) throw rejected(body.errors)
     return
   }
-  if (body.errors && Object.keys(body.errors).length > 0) {
-    throw new FootballApiError('rejected', `API request rejected: ${JSON.stringify(body.errors)}`)
-  }
+  if (body.errors && Object.keys(body.errors).length > 0) throw rejected(body.errors)
 }
 
-/** Default transport wired into the app; injectable elsewhere. */
-export const footballApiTransport: FixturesTransport = (dateKey) =>
-  fetchFixturesByDate({ dateKey })
+function rejected(errors: unknown): FootballApiError {
+  const text = JSON.stringify(errors).toLowerCase()
+  if (text.includes('free plans do not have access')) {
+    return new FootballApiError(
+      'plan-date-restricted',
+      'API-Football free plan does not cover this date.',
+    )
+  }
+  return new FootballApiError('rejected', `API request rejected: ${JSON.stringify(errors)}`)
+}
+
+export const apiFootballTransport = async (dateKey: string): Promise<Match[]> =>
+  fetchApiFootballFixturesByDate({ dateKey })

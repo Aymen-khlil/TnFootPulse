@@ -1,10 +1,10 @@
 import type { StageKind } from '@/types/football'
 
 /**
- * Maps API league.round strings to internal stages. Order-sensitive:
- * "Quarter-finals" contains "final", so quarter is tested first.
- * Unrecognized strings degrade conservatively to a normal league match
- * with a dev-mode warning so drift stays visible instead of silent.
+ * Maps API-Football league.round strings to internal stages.
+ * Order-sensitive: "Quarter-finals" contains "final", so quarter is
+ * tested first. Unrecognized strings degrade conservatively to a normal
+ * league match with a dev-mode warning so drift stays visible.
  */
 export function normalizeStage(rawRound: string | undefined): StageKind {
   const round = (rawRound ?? '').toLowerCase()
@@ -35,6 +35,6 @@ export function normalizeStage(rawRound: string | undefined): StageKind {
 
 function warnUnrecognized(rawRound: string | undefined): void {
   if (import.meta.env.DEV) {
-    console.warn(`[normalizeStage] Unrecognized round string: "${rawRound}" — treated as a regular league match.`)
+    console.warn(`[apiFootball/normalizeStage] Unrecognized round string: "${rawRound}" — treated as a regular league match.`)
   }
 }

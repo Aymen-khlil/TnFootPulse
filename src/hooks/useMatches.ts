@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Match, ScoredMatch } from '@/types/football'
-import { calculatePriority } from '@/scoring/calculatePriority'
-import { FootballApiError, footballApiTransport } from '@/services/footballApi'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ScoredMatch } from '@/types/football'
 import {
-  getMatchesForDate,
-  type FixturesTransport,
-} from '@/cache/fixturesCache'
-import { shiftDateKey, todayInTunis } from '@/utils/timezone'
+  defaultAgendaDeps,
+  getAgendaForDate,
+  prefetchTomorrow,
+  resetAgendaCache,
+  type AgendaDeps,
+} from '@/services/fixturesOrchestrator'
+import { todayInTunis } from '@/utils/timezone'
 
 export type MatchLoadError = {
   kind: 'config' | 'transient'
@@ -23,82 +24,76 @@ export type MatchesState = {
 }
 
 /**
- * The app's single fetch point. Orchestrates cache → transport →
- * normalize (inside the transport) → score. Initial load pre-fetches
- * tomorrow in parallel (SPEC §7); other dates load on demand. The UI
- * never fetches or scores.
+ * The app's single data touchpoint. Delegates provider orchestration,
+ * merging, dedup and scoring to the agenda service; caches per date so
+ * revisits cost nothing. Initial load pre-warms tomorrow in parallel.
  */
-export function useMatches(
-  transport: FixturesTransport = footballApiTransport,
-): MatchesState {
+export function useMatches(deps?: AgendaDeps): MatchesState {
+  const agendaDeps = deps ?? defaultAgendaDeps
   const [selectedDateKey, setSelectedDateKey] = useState(todayInTunis)
-  const [matchesByDate, setMatchesByDate] = useState<Record<string, Match[]>>({})
+  const [agendaByDate, setAgendaByDate] = useState<Record<string, ScoredMatch[]>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<MatchLoadError | null>(null)
 
-  const store = useCallback((dateKey: string, matches: Match[]) => {
-    setMatchesByDate((prev) => ({ ...prev, [dateKey]: matches }))
-  }, [])
-
   const load = useCallback(
     async (dateKey: string) => {
-      if (matchesByDate[dateKey]) return
       setIsLoading(true)
       setError(null)
       try {
-        const matches = await getMatchesForDate(dateKey, transport)
-        store(dateKey, matches)
+        const agenda = await getAgendaForDate(dateKey, agendaDeps)
+        setAgendaByDate((prev) => ({ ...prev, [dateKey]: agenda }))
       } catch (cause) {
-        if (cause instanceof FootballApiError && cause.code === 'missing-key') {
-          setError({ kind: 'config', message: cause.message })
-        } else {
-          setError({
-            kind: 'transient',
-            message: "Unable to load today's matches. Please try again.",
-          })
-        }
+        setError(toLoadError(cause))
       } finally {
         setIsLoading(false)
       }
     },
-    // Loads are per-date idempotent; state reads inside are guarded by the cache map.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store, transport],
+    [agendaDeps],
   )
 
   useEffect(() => {
     void load(selectedDateKey)
   }, [load, selectedDateKey])
 
-  // Parallel pre-fetch of tomorrow on first mount (SPEC §7 initial load).
-  const prefetchedTomorrow = useRef(false)
+  const prefetched = useRef(false)
   useEffect(() => {
-    if (prefetchedTomorrow.current) return
-    prefetchedTomorrow.current = true
-    const tomorrow = shiftDateKey(todayInTunis(), 1)
-    void getMatchesForDate(tomorrow, transport)
-      .then((matches) => store(tomorrow, matches))
-      .catch(() => {}) // surfaced when the user actually selects that date
-  }, [store, transport])
-
-  const scoredMatches = useMemo(() => {
-    const matches = matchesByDate[selectedDateKey] ?? []
-    return matches
-      .map((match) => ({ match, priority: calculatePriority(match) }))
-      .sort(
-        (a, b) =>
-          b.priority.total - a.priority.total ||
-          a.match.kickoff.getTime() - b.match.kickoff.getTime(),
-      )
-  }, [matchesByDate, selectedDateKey])
+    if (prefetched.current) return
+    prefetched.current = true
+    prefetchTomorrow(agendaDeps)
+  }, [agendaDeps])
 
   const selectDate = useCallback((dateKey: string) => {
     setSelectedDateKey(dateKey)
   }, [])
 
   const retry = useCallback(() => {
+    resetAgendaCache()
     void load(selectedDateKey)
   }, [load, selectedDateKey])
 
-  return { selectedDateKey, selectDate, scoredMatches, isLoading, error, retry }
+  return {
+    selectedDateKey,
+    selectDate,
+    scoredMatches: agendaByDate[selectedDateKey] ?? [],
+    isLoading,
+    error,
+    retry,
+  }
+}
+
+function toLoadError(cause: unknown): MatchLoadError {
+  const code = (cause as { code?: string } | null)?.code
+  if (code === 'missing-key' || code === 'missing-token') {
+    return {
+      kind: 'config',
+      message:
+        cause instanceof Error && cause.message
+          ? cause.message
+          : 'Provider credentials are missing.',
+    }
+  }
+  return {
+    kind: 'transient',
+    message: "Unable to load today's matches. Please try again.",
+  }
 }

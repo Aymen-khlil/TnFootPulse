@@ -1,0 +1,57 @@
+{
+ "resultSet": { "count": 5, "played": 0 },
+ "matches": [
+  {
+   "id": 5000001,
+   "utcDate": "2026-10-20T19:00:00Z",
+   "status": "TIMED",
+   "matchday": 3,
+   "stage": "GROUP_STAGE",
+   "competition": { "id": 2001, "name": "UEFA Champions League", "code": "CL", "type": "CUP", "emblem": "https://crests.football-data.org/ucl.svg" },
+   "homeTeam": { "id": 541, "name": "Real Madrid", "shortName": "Real Madrid", "tla": "RMA", "crest": "https://crests.football-data.org/rma.png" },
+   "awayTeam": { "id": 65, "name": "Manchester City", "shortName": "Man City", "tla": "MCI", "crest": "https://crests.football-data.org/mci.png" },
+   "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null }, "halfTime": { "home": null, "away": null } }
+  },
+  {
+   "id": 5000002,
+   "utcDate": "2026-10-21T16:30:00Z",
+   "status": "IN_PLAY",
+   "minute": "34",
+   "stage": "REGULAR_SEASON",
+   "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE", "emblem": null },
+   "homeTeam": { "id": 64, "name": "Liverpool FC", "shortName": "Liverpool", "tla": "LIV", "crest": null },
+   "awayTeam": { "id": 57, "name": "Arsenal FC", "shortName": "Arsenal", "tla": "ARS", "crest": null },
+   "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": 1, "away": 0 }, "halfTime": { "home": 0, "away": 0 } }
+  },
+  {
+   "id": 5000003,
+   "utcDate": "2026-10-21T18:00:00Z",
+   "status": "POSTPONED",
+   "stage": "REGULAR_SEASON",
+   "competition": { "id": 2002, "name": "Bundesliga", "code": "BL1", "type": "LEAGUE", "emblem": null },
+   "homeTeam": { "id": 710, "name": "FC Bayern München", "shortName": "Bayern", "tla": "FCB", "crest": null },
+   "awayTeam": { "id": 721, "name": "VfB Stuttgart", "shortName": "Stuttgart", "tla": "VFB", "crest": null },
+   "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null }, "halfTime": { "home": null, "away": null } }
+  },
+  {
+   "id": 5000004,
+   "utcDate": "2026-10-22T19:45:00Z",
+   "status": "SCHEDULED",
+   "stage": "QUARTER_FINALS",
+   "competition": { "id": 2001, "name": "UEFA Champions League", "code": "CL", "type": "CUP", "emblem": null },
+   "homeTeam": { "id": 502, "name": "Manchester United FC", "shortName": "Man United", "tla": "MUN", "crest": null },
+   "awayTeam": { "id": 5291, "name": "Club Brugge KV", "shortName": "Club Brugge", "tla": "CLU", "crest": null },
+   "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null }, "halfTime": { "home": null, "away": null } }
+  },
+  {
+   "id": 5000005,
+   "utcDate": "2026-10-22T20:00:00Z",
+   "status": "FINISHED",
+   "stage": "REGULAR_SEASON",
+   "competition": { "id": 2014, "name": "Primera Division", "code": "PD", "type": "LEAGUE", "emblem": null },
+   "homeTeam": { "id": 559, "name": "Real Sociedad de Fútbol", "shortName": "Real Sociedad", "tla": "RSO", "crest": null },
+   "awayTeam": { "id": 5607, "name": "Girona FC", "shortName": "Girona", "tla": "GIR", "crest": null },
+   "score": { "winner": "AWAY_TEAM", "duration": "REGULAR", "fullTime": { "home": 0, "away": 2 }, "halfTime": { "home": 0, "away": 1 } }
+  }
+ ]
+}

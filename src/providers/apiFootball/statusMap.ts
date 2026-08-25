@@ -9,8 +9,11 @@ export type NormalizedStatus = {
 const LIVE_SHORTS = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'SUSP', 'INT'])
 
 /**
- * Whitelist mapping from API status short-codes. Only not-started and
- * in-play fixtures are visible in the agenda (SPEC §12).
+ * API-Football status whitelist. Only not-started and in-play fixtures
+ * are visible in the agenda (SPEC §12):
+ *   visible/scheduled: NS
+ *   visible/live:      1H HT 2H ET BT P LIVE SUSP INT
+ *   hidden:            TBD FT AET PEN PST CANC ABD AWD WO (+ unseen)
  */
 export function normalizeStatus(short: string, elapsed: number | null): NormalizedStatus {
   if (short === 'NS') return { visible: true, status: 'scheduled' }
@@ -21,6 +24,5 @@ export function normalizeStatus(short: string, elapsed: number | null): Normaliz
       minuteElapsed: elapsed ?? undefined,
     }
   }
-  // TBD, FT, AET, PEN, PST, CANC, ABD, AWD, WO and anything unseen.
   return { visible: false, status: 'scheduled' }
 }

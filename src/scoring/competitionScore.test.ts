@@ -15,6 +15,7 @@ describe('competitionScore', () => {
 
   it('falls back to the default rating for unlisted competition ids', () => {
     expect(competitionRatingById('999999')).toBe(6)
-    expect(competitionRatingById('2')).toBe(30) // Champions League
+    expect(competitionRatingById('202')).toBe(14) // Tunisian Ligue 1 via API-Football id
+    expect(competitionRatingById('CL')).toBe(30) // Champions League via fd.org code
   })
 })

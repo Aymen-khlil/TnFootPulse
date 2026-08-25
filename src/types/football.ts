@@ -1,3 +1,5 @@
+export type ProviderId = 'football-data' | 'api-football'
+
 export type StageKind =
   | 'final'
   | 'semi-final'
@@ -10,15 +12,20 @@ export type StageKind =
 export type MatchStatus = 'scheduled' | 'live'
 
 export type Team = {
+  /** Stable internal identity (canonical dataset slug/id). */
+  internalId?: string
   id: string
   name: string
   logo?: string
   /** Application-owned rating on a 0–100 scale (curated or fallback). */
   rating: number
+  /** Provider-specific ids are optional metadata; never required. */
+  apiFootballId?: number
+  footballDataId?: number
 }
 
 export type Competition = {
-  /** API-Football league id. */
+  /** Stable TnFootPulse internal id — decoupled from both providers. */
   id: string
   name: string
   country?: string
@@ -38,11 +45,16 @@ export type Match = {
   /** Minutes since Tunis midnight (0–1439). */
   tunisMinuteOfDay: number
   stage: StageKind
-  /** Original API round string, preserved for debugging/explanation. */
+  /** Provider-native round/stage value, preserved for debugging. */
   rawRound?: string
   status: MatchStatus
   minuteElapsed?: number
   score?: { home: number; away: number }
+  /**
+   * Debugging/tracing metadata ONLY. Must never be read by scoring,
+   * rivalry detection, importance weighting, or UI rendering.
+   */
+  source?: ProviderId
 }
 
 export type ScoredMatch = {

@@ -12,43 +12,67 @@ Tunisia. Full specification in [`SPEC.md`](./SPEC.md); work tracked on
 
 ```bash
 npm install
-cp .env.example .env   # then paste your API-Sports key into VITE_API_FOOTBALL_KEY
+cp .env.example .env   # then paste both provider credentials
 npm run dev            # http://localhost:5173
 ```
 
 Other scripts:
 
 ```bash
-npm test        # Vitest suite (scoring engine + data pipeline)
+npm test        # Vitest suite (scoring engine + provider pipeline)
 npm run typecheck
 npm run build   # typecheck + production build
 ```
 
-## API key
+## Providers
 
-- Register for the free plan at [api-football.com](https://www.api-football.com/)
+TnFootPulse combines **two football data providers** behind one normalized
+layer; the scoring engine and UI never know which provider supplied a match.
+Ownership is exclusive per competition (see `src/data/competitions.ts`):
+
+| Provider | Competitions | Request strategy |
+|---|---|---|
+| football-data.org (free tier) | UCL, Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Primeira, Eredivisie | One ranged request per 7-day window (`dateFrom/dateTo`) |
+| API-Football direct (free plan) | **Tunisian Ligue 1**, Europa/Conference League, cups, CAF CL, Saudi Pro League | One request per date |
+
+**Date windows differ by design.** football-data.org serves arbitrary future
+ranges. The API-Football free plan empirically restricts future dates
+(*"Free plans do not have access to this date…"*) — the app guards requests
+with a conservative window constant and degrades the provider's contribution
+gracefully when the API itself rejects a date, while football-data.org keeps
+supplying fixtures independently.
+
+Deduplication is provider-independent: composite identity of internal
+competition + canonical team names with a ±15-minute kickoff tolerance.
+
+## Provider credentials
+
+- `VITE_FOOTBALL_DATA_API_TOKEN` — register at
+  [football-data.org](https://www.football-data.org/client/register) (free tier).
+- `VITE_API_FOOTBALL_KEY` — register at [api-football.com](https://www.api-football.com/)
   (direct channel, 100 requests/day).
-- Put the key in `.env` as `VITE_API_FOOTBALL_KEY`. Never hardcode it.
-- **Local MVP only:** the key ships to the browser frontend by design.
-  Before any public deployment it must move behind a server-side/serverless proxy.
+
+Never hardcode credentials. **Local MVP only:** both tokens ship to the
+browser frontend by design; before any public deployment they MUST move
+behind a server-side/serverless proxy.
 
 ### CORS note
 
-**Verified working directly (2026-08-25):** the API answers browser
-preflights with `access-control-allow-origin: *` and whitelists
-`x-apisports-key`, so no proxy is needed for local development — the app
-calls `https://v3.football.api-sports.io` straight from the browser,
-sending **only** that single header (anything else triggers preflight
-rejections). The prepared dev-server proxy block in the Vite config stays
-as the seam for a future serverless proxy at public-deployment time.
-Free plan also enforces a per-minute limit of 10 requests (`x-ratelimit-limit`)
-on top of the daily 100 — well above this app's ~2 requests per load.
-See SPEC.md §17 for the verify-before-coding checklist.
+**Verified working directly (2026-08-25):** both providers answer browser
+calls with `access-control-allow-origin: *` — API-Football whitelists
+`x-apisports-key`, football-data.org whitelists `X-Auth-Token` — so no proxy
+is needed for local development. Send **only** those single headers (extra
+headers trigger preflight rejections). The prepared dev-server proxy block
+in the Vite config stays as the seam for a future serverless proxy.
+API-Football's free plan also enforces a per-minute limit of 10 requests
+on top of the daily 100. See SPEC.md §17 for the verify-before-coding checklist.
 
 ## Architecture in one line
 
 ```text
-API-Football → transport → date cache → normalize/filter → pure scoring engine → hook → React UI
+football-data.org ──┐
+                    ├→ normalize → merge/dedupe → pure scoring engine → UI
+API-Football ───────┘   (same internal Match model from both providers)
 ```
 
 The scoring engine accepts normalized matches and returns a full breakdown;
