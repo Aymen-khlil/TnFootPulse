@@ -40,30 +40,30 @@ export const TEAM_CONFIGS: TeamConfig[] = [
   // La Liga
   { name: 'Real Madrid', apiId: 541, rating: 100 },
   { name: 'Barcelona', aliases: ['FC Barcelona'], apiId: 529, rating: 99 },
-  { name: 'Atlético Madrid', aliases: ['Atletico Madrid'], rating: 86 },
+  { name: 'Atlético Madrid', aliases: ['Atletico Madrid', 'Club Atlético de Madrid'], rating: 86 },
   { name: 'Sevilla', rating: 78 },
   { name: 'Athletic Club', aliases: ['Athletic Bilbao'], rating: 76 },
-  { name: 'Real Sociedad', rating: 75 },
+  { name: 'Real Sociedad', aliases: ['Real Sociedad de Fútbol'], rating: 75 },
   { name: 'Villarreal', rating: 74 },
-  { name: 'Real Betis', aliases: ['Betis'], rating: 73 },
+  { name: 'Real Betis', aliases: ['Real Betis Balompié'], rating: 73 },
   { name: 'Valencia', rating: 71 },
   { name: 'Girona', rating: 70 },
 
   // Serie A
-  { name: 'Inter', aliases: ['Inter Milan', 'Internazionale'], rating: 90 },
+  { name: 'Inter', aliases: ['Inter Milan', 'Internazionale', 'FC Internazionale Milano'], rating: 90 },
   { name: 'AC Milan', aliases: ['Milan'], rating: 88 },
   { name: 'Juventus', rating: 86 },
-  { name: 'Napoli', rating: 85 },
-  { name: 'Atalanta', rating: 80 },
+  { name: 'Napoli', aliases: ['SSC Napoli'], rating: 85 },
+  { name: 'Atalanta', aliases: ['Atalanta BC'], rating: 80 },
   { name: 'Roma', aliases: ['AS Roma'], rating: 80 },
   { name: 'Lazio', aliases: ['SS Lazio'], rating: 79 },
-  { name: 'Fiorentina', rating: 75 },
-  { name: 'Bologna', rating: 72 },
+  { name: 'Fiorentina', aliases: ['ACF Fiorentina'], rating: 75 },
+  { name: 'Bologna', aliases: ['Bologna FC 1909'], rating: 72 },
 
   // Bundesliga
   { name: 'Bayern Munich', aliases: ['Bayern', 'FC Bayern München', 'Bayern Munchen'], rating: 95 },
   { name: 'Borussia Dortmund', aliases: ['Dortmund', 'BVB'], rating: 85 },
-  { name: 'Bayer Leverkusen', aliases: ['Leverkusen'], rating: 84 },
+  { name: 'Bayer Leverkusen', aliases: ['Leverkusen', 'Bayer 04 Leverkusen'], rating: 84 },
   { name: 'RB Leipzig', aliases: ['RasenBallsport Leipzig'], rating: 82 },
   { name: 'Eintracht Frankfurt', rating: 76 },
   { name: 'VfB Stuttgart', aliases: ['Stuttgart'], rating: 74 },
@@ -71,20 +71,20 @@ export const TEAM_CONFIGS: TeamConfig[] = [
   // Ligue 1
   { name: 'PSG', aliases: ['Paris Saint Germain', 'Paris Saint-Germain', 'Paris SG'], rating: 94 },
   { name: 'Monaco', aliases: ['AS Monaco'], rating: 78 },
-  { name: 'Marseille', rating: 77 },
+  { name: 'Marseille', aliases: ['Olympique de Marseille'], rating: 77 },
   { name: 'Lyon', aliases: ['Olympique Lyonnais'], rating: 75 },
-  { name: 'Lille', aliases: ['LOSC Lille'], rating: 73 },
-  { name: 'Nice', rating: 71 },
+  { name: 'Lille', aliases: ['LOSC Lille', 'Lille OSC'], rating: 73 },
+  { name: 'Nice', aliases: ['OGC Nice'], rating: 71 },
 
   // Portugal
-  { name: 'Benfica', aliases: ['SL Benfica'], rating: 81 },
+  { name: 'Benfica', aliases: ['SL Benfica', 'Sport Lisboa e Benfica'], rating: 81 },
   { name: 'Porto', aliases: ['FC Porto'], rating: 81 },
   { name: 'Sporting CP', aliases: ['Sporting Lisbon', 'Sporting Clube de Portugal'], rating: 80 },
 
   // Netherlands
   { name: 'PSV', aliases: ['PSV Eindhoven'], rating: 77 },
   { name: 'Ajax', aliases: ['AFC Ajax'], rating: 76 },
-  { name: 'Feyenoord', rating: 75 },
+  { name: 'Feyenoord', aliases: ['Feyenoord Rotterdam'], rating: 75 },
   { name: 'AZ Alkmaar', aliases: ['AZ'], rating: 70 },
 
   // Turkey
@@ -129,9 +129,28 @@ for (const config of TEAM_CONFIGS) {
   }
 }
 
+const WARNED_UNKNOWN_NAMES = new Set<string>()
+
 /** Curated rating for any team name; unknown clubs get UNKNOWN_TEAM_RATING. */
 export function teamRatingByName(name: string): number {
-  return RATING_BY_NORMALIZED_NAME.get(normalizeTeamName(name)) ?? UNKNOWN_TEAM_RATING
+  const rating = RATING_BY_NORMALIZED_NAME.get(normalizeTeamName(name))
+  if (rating === undefined) {
+    warnUnresolvedTeamName(name)
+    return UNKNOWN_TEAM_RATING
+  }
+  return rating
+}
+
+/**
+ * Silent fallback hides scoring degradation; surface it in dev so alias
+ * gaps (like football-data.org's official long names) become visible.
+ * Deduplicated per distinct name to keep the console readable.
+ */
+function warnUnresolvedTeamName(name: string): void {
+  if (!import.meta.env.DEV) return
+  if (WARNED_UNKNOWN_NAMES.has(name)) return
+  WARNED_UNKNOWN_NAMES.add(name)
+  console.warn(`[teams] No curated rating for "${name}" — using UNKNOWN_TEAM_RATING (${UNKNOWN_TEAM_RATING}). Add an alias in src/data/teams.ts if this club should resolve.`)
 }
 
 const CANONICAL_BY_NORMALIZED_NAME = new Map<string, string>()
