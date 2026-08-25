@@ -6,6 +6,15 @@ import { normalizeTeamName } from '@/utils/normalizeName'
  * Saudi clubs and major Tunisian sides. Unknown teams fall back to
  * UNKNOWN_TEAM_RATING. apiId is optional — enables migration to
  * ID-keyed matching later without bulk collection now.
+ *
+ * Annual re-curation procedure: ratings stay hand-curated at runtime,
+ * but each season, seed EUROPEAN clubs' values from the UEFA five-year
+ * club coefficient table (kassiesa.net, e.g. /data/method5/trank2027.html)
+ * rather than re-guessing. Non-European clubs — Tunisian and Saudi sides
+ * in particular — have no UEFA points and are exactly the clubs this
+ * audience cares most about, so they remain judgment-curated. The same
+ * kassiesa table is the source for the top-20 floor list in
+ * uefaClubRankings.ts; update both in the same sitting.
  */
 
 export const UNKNOWN_TEAM_RATING = 30

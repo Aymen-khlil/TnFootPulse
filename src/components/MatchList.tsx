@@ -1,5 +1,6 @@
 import type { ScoredMatch } from '@/types/football'
 import {
+  FEATURED_CARD_ACCENT_CLASS,
   PRIORITY_CATEGORY_ORDER,
   priorityCategoryMeta,
 } from '@/scoring/priorityCategory'
@@ -31,7 +32,7 @@ function MatchList({ scoredMatches, onSelect }: MatchListProps) {
               </span>
             </div>
 
-            {category === 'must-watch' ? (
+            {FEATURED_CARD_ACCENT_CLASS[category] ? (
               <div className="space-y-3">
                 {group.map((scored) => (
                   <FeaturedMatchCard key={scored.match.id} scored={scored} onSelect={onSelect} />

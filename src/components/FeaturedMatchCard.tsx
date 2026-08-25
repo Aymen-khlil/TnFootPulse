@@ -1,21 +1,23 @@
 import { Clock, Zap } from 'lucide-react'
 import type { ScoredMatch } from '@/types/football'
-import { STAGE_LABELS } from '@/scoring/priorityCategory'
+import { FEATURED_CARD_ACCENT_CLASS, STAGE_LABELS } from '@/scoring/priorityCategory'
 import { formatTunisTime } from '@/utils/timezone'
 import { PulseGauge } from '@/components/ui/gauge'
 import { ComponentRows } from './PriorityBreakdown'
 import { LiveBadge } from './LiveBadge'
 import { TeamLogo } from './TeamLogo'
 import { shortCompetitionLabel } from './MatchFilters'
+import { cn } from '@/lib/utils'
 
 type FeaturedMatchCardProps = {
   scored: ScoredMatch
   onSelect: (scored: ScoredMatch) => void
 }
 
-/** MUST-WATCH treatment: crimson border + Intelligence Report panel (ADR-0001). */
+/** Featured treatment for the top bands (ADR-0001): category-tinted border + Intelligence Report panel. */
 function FeaturedMatchCard({ scored, onSelect }: FeaturedMatchCardProps) {
   const { match, priority } = scored
+  const accent = FEATURED_CARD_ACCENT_CLASS[priority.category]
   const stageLabel =
     match.stage !== 'league-match' ? STAGE_LABELS[match.stage].toUpperCase() : null
 
@@ -23,7 +25,10 @@ function FeaturedMatchCard({ scored, onSelect }: FeaturedMatchCardProps) {
     <button
       type="button"
       onClick={() => onSelect(scored)}
-      className="group w-full rounded-xl border border-crimson/50 bg-gradient-to-br from-card to-elevated p-5 text-left shadow-lg shadow-crimson/5 transition-colors hover:border-crimson/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+      className={cn(
+        'group w-full rounded-xl border bg-gradient-to-br from-card to-elevated p-5 text-left shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6',
+        accent,
+      )}
     >
       <div className="flex flex-col gap-5 sm:flex-row">
         <div className="min-w-0 flex-1">

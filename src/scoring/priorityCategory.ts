@@ -94,3 +94,13 @@ export function priorityCategoryMeta(name: PriorityCategoryName): PriorityCatego
 
 /** Accent for the pedigree top-up row (ADR-0001 keeps every color decision here or in the theme block). */
 export const PEDIGREE_ROW_ACCENT_CLASS = 'text-amber-400'
+
+/**
+ * Featured-card accent per band (ADR-0001: color = category). Bands with
+ * an entry render as full-width featured cards tinted in their own color;
+ * bands without one stay on the compact grid card.
+ */
+export const FEATURED_CARD_ACCENT_CLASS: Partial<Record<PriorityCategoryName, string>> = {
+  'must-watch': 'border-crimson/50 shadow-crimson/5 hover:border-crimson/80',
+  'high-priority': 'border-amber-500/40 shadow-amber-500/5 hover:border-amber-500/70',
+}

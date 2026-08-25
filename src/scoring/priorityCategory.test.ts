@@ -3,6 +3,7 @@ import {
   getPriorityCategory,
   PRIORITY_CATEGORY_ORDER,
   priorityCategoryMeta,
+  FEATURED_CARD_ACCENT_CLASS,
 } from './priorityCategory'
 
 describe('priority categories', () => {
@@ -37,6 +38,27 @@ describe('priority categories', () => {
       const meta = priorityCategoryMeta(name)
       expect(meta.label.length).toBeGreaterThan(0)
       expect(meta.emoji.length).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('featured card accents (ADR-0001: color = category)', () => {
+  it('gives the two top bands a featured accent in their own color', () => {
+    expect(FEATURED_CARD_ACCENT_CLASS['must-watch']).toMatch(/crimson/)
+    expect(FEATURED_CARD_ACCENT_CLASS['high-priority']).toMatch(/amber/)
+  })
+
+  it('leaves every other band on the compact card', () => {
+    expect(FEATURED_CARD_ACCENT_CLASS['worth-watching']).toBeUndefined()
+    expect(FEATURED_CARD_ACCENT_CLASS['if-you-have-time']).toBeUndefined()
+    expect(FEATURED_CARD_ACCENT_CLASS['low-priority']).toBeUndefined()
+  })
+
+  it('every featured accent carries border and hover states', () => {
+    for (const accent of Object.values(FEATURED_CARD_ACCENT_CLASS)) {
+      expect(accent).toMatch(/border-/)
+      expect(accent).toMatch(/hover:border-/)
+      expect(accent).toMatch(/shadow-/)
     }
   })
 })
