@@ -1,5 +1,5 @@
 import type { PriorityResult } from '@/types/football'
-import { priorityCategoryMeta } from '@/scoring/priorityCategory'
+import { priorityCategoryMeta, PEDIGREE_ROW_ACCENT_CLASS } from '@/scoring/priorityCategory'
 
 const COMPONENT_CAPS = [
   { key: 'competition', label: 'Competition', cap: 30 },
@@ -26,6 +26,15 @@ function ComponentRows({ priority }: { priority: PriorityResult }) {
           </div>
         )
       })}
+      {/* Pedigree top-up (ADR-0002): shown only when a floor lifted the total. */}
+      {priority.pedigree > 0 && (
+        <div className="flex items-baseline justify-between gap-4 text-sm">
+          <span className="text-muted">Club pedigree</span>
+          <span className={`font-semibold tabular-nums ${PEDIGREE_ROW_ACCENT_CLASS}`}>
+            +{priority.pedigree}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

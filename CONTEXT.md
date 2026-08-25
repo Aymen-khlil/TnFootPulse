@@ -7,8 +7,24 @@ A football-discovery agenda answering one question for viewers in Tunisia: which
 ### Scoring
 
 **Pulse Score**:
-The 0–100 priority total of a match, composed of four capped components (competition, team importance, match context, Tunisia viewing time).
+The 0–100 priority total of a match, composed of five capped components (competition, team importance, match context, Tunisia viewing time, club pedigree).
 _Avoid_: rating, points, importance score
+
+**Club Pedigree Floor**:
+A minimum Pulse Score guarantee based on a club's standing — either its UEFA five-year sporting coefficient rank (top 20) or its status as a historically dominant Tunisian club (top 4). The floor is enforced via a "pedigree top-up" fifth component that fills the gap when the other four components sum below the floor. Applies to competitive matches only; never to friendlies.
+_Avoid_: prestige bonus, club weight, coefficient bonus
+
+**UEFA Ranked Club**:
+A club appearing in the top 20 of the UEFA five-year sporting club coefficient for the current season (sourced from kassiesa.net). The list is curated once per season, not fetched live.
+_Avoid_: European club, CL club
+
+**Tunisian Elite Club**:
+One of the four historically dominant Tunisian clubs: Espérance Sportive de Tunis, Club Africain de Tunis, Étoile Sportive du Sahel, CS Sfaxien. These clubs receive a Worth Watching floor (70) in any competitive match, and a High Priority floor (80) when two of them face each other.
+_Avoid_: Tunisian big club, local giant
+
+**Pedigree Top-Up**:
+The fifth scoring component — a non-negative integer that fills the gap between the sum of the first four components and the applicable Club Pedigree Floor. When no floor applies, pedigree is zero and invisible in the Intelligence Report. When it fires, it appears as a labeled row plus a reason line: "UEFA pedigree — <club> (rank N)" or "Tunisian elite pedigree".
+_Avoid_: bonus, boost, override
 
 **Priority Category**:
 One of five named bands that translate a Pulse Score into plain language: Must Watch (90–100), High Priority (80–89), Worth Watching (70–79), If You Have Time (55–69), Low Priority (0–54).

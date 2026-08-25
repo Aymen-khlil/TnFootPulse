@@ -75,6 +75,8 @@ export type PriorityResult = {
   teams: number
   context: number
   tunisiaTime: number
+  /** Pedigree top-up (ADR-0002): fills the gap to the club pedigree floor; 0 when none applies. */
+  pedigree: number
   category: PriorityCategoryName
   reasons: string[]
 }

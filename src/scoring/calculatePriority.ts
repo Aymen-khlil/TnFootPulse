@@ -4,6 +4,7 @@ import { clampCompetitionScore } from './competitionScore'
 import { teamScore } from './teamScore'
 import { contextScore } from './contextScore'
 import { timeScore, timeWindowLabel } from './timeScore'
+import { pedigreeFloor } from './pedigreeFloor'
 import { getPriorityCategory, STAGE_LABELS } from './priorityCategory'
 
 /**
@@ -20,7 +21,15 @@ export function calculatePriority(match: Match): PriorityResult {
   const context = contextScore(match.stage, rivalry)
   const tunisiaTime = timeScore(match.tunisMinuteOfDay)
 
-  const total = Math.min(100, Math.max(0, competition + teams + context + tunisiaTime))
+  const baseSum = competition + teams + context + tunisiaTime
+
+  // Club pedigree floor (ADR-0002): a top-up component that lifts the
+  // total to the floor without hiding the gap — the components plus
+  // the top-up always sum to the reported total.
+  const floor = pedigreeFloor(match.homeTeam.name, match.awayTeam.name, match.competition.name)
+  const pedigree = floor ? Math.max(0, Math.min(100, floor.floor) - baseSum) : 0
+
+  const total = Math.min(100, baseSum + pedigree)
 
   return {
     total,
@@ -28,12 +37,14 @@ export function calculatePriority(match: Match): PriorityResult {
     teams,
     context,
     tunisiaTime,
+    pedigree,
     category: getPriorityCategory(total),
     reasons: [
       `${match.competition.name} · +${competition}`,
       `${teamDescriptor(match)} · +${teams}`,
       `${contextDescriptor(match.stage, rivalry)} · +${context}`,
       `${timeWindowLabel(match.tunisMinuteOfDay)} · +${tunisiaTime}`,
+      ...(pedigree > 0 && floor ? [`${floor.reasonLabel} · +${pedigree}`] : []),
     ],
   }
 }

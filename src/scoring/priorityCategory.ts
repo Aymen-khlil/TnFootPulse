@@ -91,3 +91,6 @@ export function getPriorityCategory(total: number): PriorityCategoryName {
 export function priorityCategoryMeta(name: PriorityCategoryName): PriorityCategoryMeta {
   return PRIORITY_CATEGORIES[name]
 }
+
+/** Accent for the pedigree top-up row (ADR-0001 keeps every color decision here or in the theme block). */
+export const PEDIGREE_ROW_ACCENT_CLASS = 'text-amber-400'
