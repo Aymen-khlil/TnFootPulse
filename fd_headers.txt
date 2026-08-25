@@ -1,0 +1,13 @@
+HTTP/1.1 200 
+Server: nginx
+Date: Tue, 25 Aug 2026 22:16:11 GMT
+Content-Type: application/json;charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Requests-Available: 48
+X-RequestCounter-Reset: 86285
+X-API-Version: v4
+X-Authenticated-Client: anonymous
+Content-Language: en-US
+X-Cache-Status: BYPASS
+

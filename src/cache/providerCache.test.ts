@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ProviderRequestCache } from './providerCache'
 
 beforeEach(() => {
@@ -79,5 +79,73 @@ describe('ProviderRequestCache', () => {
     cache.clear()
     await cache.run('a', task)
     expect(calls).toBe(2)
+  })
+
+  describe('TTL entries', () => {
+    it('serves within the window and refetches after expiry', async () => {
+      vi.useFakeTimers()
+      try {
+        const cache = new ProviderRequestCache()
+        let calls = 0
+        const task = async () => {
+          calls++
+          return ['match']
+        }
+
+        await cache.run('k', task, () => 60_000)
+        await cache.run('k', task, () => 60_000)
+        expect(calls).toBe(1)
+
+        vi.advanceTimersByTime(61_000)
+        await cache.run('k', task, () => 60_000)
+        expect(calls).toBe(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('derives the window per result (empty results expire sooner)', async () => {
+      vi.useFakeTimers()
+      try {
+        const cache = new ProviderRequestCache()
+        let calls = 0
+        const task = async () => {
+          calls++
+          return calls === 1 ? [] : ['fresh']
+        }
+        const ttlFromResult = (value: string[]) =>
+          value.length === 0 ? 10 * 60_000 : 3 * 60 * 60_000
+
+        await cache.run('k', task, ttlFromResult) // empty → 10 min window
+        vi.advanceTimersByTime(11 * 60_000)
+        await cache.run('k', task, ttlFromResult) // expired, refetches fresh → 3 h window
+        expect(calls).toBe(2)
+
+        vi.advanceTimersByTime(30 * 60_000) // well inside the 3 h window
+        await cache.run('k', task, ttlFromResult)
+        expect(calls).toBe(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('entries without a resolver never expire (existing behavior)', async () => {
+      vi.useFakeTimers()
+      try {
+        const cache = new ProviderRequestCache()
+        let calls = 0
+        const task = async () => {
+          calls++
+          return 'x'
+        }
+
+        await cache.run('k', task)
+        vi.advanceTimersByTime(24 * 60 * 60_000)
+        await cache.run('k', task)
+        expect(calls).toBe(1)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 })

@@ -47,7 +47,7 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header />
+      <Header onRefresh={retry} isRefreshing={isLoading} />
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-8">
         <section>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

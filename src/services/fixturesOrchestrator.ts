@@ -6,6 +6,8 @@ import {
 } from '@/cache/providerCache'
 import {
   API_FOOTBALL_MAX_DAYS_AHEAD,
+  AGENDA_TTL_EMPTY_MS,
+  AGENDA_TTL_FRESH_MS,
   FOOTBALL_DATA_RANGE_DAYS,
 } from '@/config/limits'
 import {
@@ -42,12 +44,17 @@ export type AgendaResult = {
  *
  * Results are cached per date (`agenda:<key>`) on top of the
  * provider-scoped request caches, so revisiting a date costs nothing.
+ * Entries carry a freshness window (Option C): fresh agendas live 3h,
+ * empty ones 10min — providers can retract or release fixtures and the
+ * agenda heals without user action.
  */
 export async function getAgendaForDate(
   dateKey: string,
   deps: AgendaDeps = defaultAgendaDeps,
 ): Promise<AgendaResult> {
-  return providerRequestCache.run(`agenda:${dateKey}`, async () => {
+  return providerRequestCache.run(
+    `agenda:${dateKey}`,
+    async () => {
     // Week-aligned fd.org window: any two dates inside the same 7-day
     // block share ONE cached ranged request instead of refetching.
     const { from, to } = footballDataWindowFor(dateKey)
@@ -116,7 +123,9 @@ export async function getAgendaForDate(
         ),
       providerNotices,
     }
-  })
+    },
+    (result) => (result.matches.length > 0 ? AGENDA_TTL_FRESH_MS : AGENDA_TTL_EMPTY_MS),
+  )
 }
 
 /** Initial-load prefetch of tomorrow (SPEC §7 parallel warm-up). */

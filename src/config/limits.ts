@@ -18,5 +18,15 @@ export const FOOTBALL_DATA_RANGE_DAYS = 7
 /** Conservative guard only — see above. Tunable, not a promise. */
 export const API_FOOTBALL_MAX_DAYS_AHEAD = 1
 
+/**
+ * Agenda freshness windows (ADR: Option C staleness policy). Fresh
+ * agendas revalidate every 3h — comfortably inside fd.org's ~10
+ * requests/day budget since week-aligned ranges amortize across dates.
+ * Empty agendas recheck after 10 minutes so provider outages and
+ * mid-day fixture releases surface quickly.
+ */
+export const AGENDA_TTL_FRESH_MS = 3 * 60 * 60_000
+export const AGENDA_TTL_EMPTY_MS = 10 * 60_000
+
 /** Kickoff-drift tolerance for cross-provider deduplication. */
 export const DEDUPLICATION_WINDOW_MINUTES = 15
