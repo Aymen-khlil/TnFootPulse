@@ -47,7 +47,10 @@ export function isSupportedCompetition(id: string): boolean {
 }
 
 /** Distinct display name for a competition, disambiguating shared names. */
-export function competitionDisplayName(config: CompetitionConfig): string {
+export function competitionDisplayName(config: {
+  name: string
+  country?: string
+}): string {
   return config.country === 'World' || config.country === 'Africa'
     ? config.name
     : `${config.name} (${config.country})`

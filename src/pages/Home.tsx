@@ -1,0 +1,89 @@
+import { useMemo, useState } from 'react'
+import type { ScoredMatch } from '@/types/football'
+import { useMatches } from '@/hooks/useMatches'
+import { Header } from '@/components/Header'
+import { DateSelector } from '@/components/DateSelector'
+import {
+  MatchFilters,
+  type PriorityFilter,
+} from '@/components/MatchFilters'
+import { MatchList } from '@/components/MatchList'
+import { MatchDetailsDialog } from '@/components/MatchDetailsDialog'
+import { AgendaSkeleton } from '@/components/MatchCardSkeleton'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
+
+function Home() {
+  const {
+    selectedDateKey,
+    selectDate,
+    scoredMatches,
+    isLoading,
+    error,
+    retry,
+  } = useMatches()
+
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
+  const [competitionFilter, setCompetitionFilter] = useState('all')
+  const [detail, setDetail] = useState<ScoredMatch | null>(null)
+
+  const filtered = useMemo(
+    () =>
+      scoredMatches.filter(({ priority, match }) =>
+        (priorityFilter === 'all' || priority.category === priorityFilter) &&
+        (competitionFilter === 'all' || match.competition.id === competitionFilter),
+      ),
+    [scoredMatches, priorityFilter, competitionFilter],
+  )
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Header />
+      <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-8">
+        <section>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Football Tonight
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            All times are Tunisia time
+          </p>
+          <DateSelector
+            selectedDateKey={selectedDateKey}
+            onSelect={selectDate}
+            className="mt-4"
+          />
+        </section>
+
+        <div className="my-6 space-y-3">
+          <MatchFilters
+            priorityFilter={priorityFilter}
+            onPriorityFilterChange={setPriorityFilter}
+            competitionFilter={competitionFilter}
+            onCompetitionFilterChange={setCompetitionFilter}
+            scoredMatches={scoredMatches}
+          />
+        </div>
+
+        {isLoading ? (
+          <AgendaSkeleton />
+        ) : error ? (
+          <ErrorState message={error} onRetry={retry} />
+        ) : scoredMatches.length === 0 ? (
+          <EmptyState variant="no-matches" />
+        ) : filtered.length === 0 ? (
+          <EmptyState variant="no-filter-match" />
+        ) : (
+          <MatchList scoredMatches={filtered} onSelect={setDetail} />
+        )}
+      </main>
+
+      <MatchDetailsDialog
+        scored={detail}
+        open={detail !== null}
+        onOpenChange={(open) => !open && setDetail(null)}
+      />
+    </div>
+  )
+}
+
+export { Home }
