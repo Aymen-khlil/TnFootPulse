@@ -1,4 +1,10 @@
-export type ProviderId = 'football-data' | 'api-football'
+export type ProviderId = 'football-data' | 'api-football' | 'espn'
+
+/**
+ * Which exclusive data pipeline produces the visible agenda (CONTEXT.md:
+ * "Source Mode"). Modes never mix — see docs/adr/0003.
+ */
+export type SourceMode = 'curated' | 'espn'
 
 export type StageKind =
   | 'final'

@@ -55,8 +55,16 @@ export class ProviderRequestCache {
     return promise
   }
 
-  clear(): void {
-    this.entries.clear()
+  clear(prefix?: string): void {
+    if (!prefix) {
+      this.entries.clear()
+      return
+    }
+    // Selective eviction lets a manual refresh force-reload ONE Source
+    // Mode's lane without touching the other's warm entries.
+    for (const key of [...this.entries.keys()]) {
+      if (key.startsWith(prefix)) this.entries.delete(key)
+    }
   }
 }
 

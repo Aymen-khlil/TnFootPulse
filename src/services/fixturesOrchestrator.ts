@@ -1,4 +1,4 @@
-import type { Match, ScoredMatch } from '@/types/football'
+import type { Match, ScoredMatch, SourceMode } from '@/types/football'
 import { calculatePriority } from '@/scoring/calculatePriority'
 import { mergeMatches } from '@/providers/merge'
 import {
@@ -75,12 +75,16 @@ export type AgendaResult = {
  * cadence tightens to 12min so scores creep forward without polling AF
  * or burning fd.org's tank.
  */
+/** Memory-cache lane prefixes — single source of truth for both modes. */
+export const CURATED_AGENDA_CACHE_PREFIX = 'agenda:'
+export const ESPN_AGENDA_CACHE_PREFIX = 'espn-agenda:'
+
 export async function getAgendaForDate(
   dateKey: string,
   deps: AgendaDeps = defaultAgendaDeps,
 ): Promise<AgendaResult> {
   return providerRequestCache.run(
-    `agenda:${dateKey}`,
+    `${CURATED_AGENDA_CACHE_PREFIX}${dateKey}`,
     async () => {
     // Reload survival: a persisted snapshot inside its freshness window
     // answers immediately — zero network, zero quota.
@@ -207,11 +211,22 @@ export function prefetchTomorrow(deps: AgendaDeps = defaultAgendaDeps): void {
 }
 
 /**
- * Manual-refresh semantics: wipe BOTH cache layers so the next load is a
- * guaranteed network round-trip. Persisted snapshots are deliberately
- * included — "refresh" that serves a localStorage copy would be a lie.
+ * Manual-refresh semantics for one Source Mode (or all when omitted):
+ * wipe BOTH cache layers of that lane so the next load is a guaranteed
+ * network round-trip. Persisted snapshots are deliberately included —
+ * "refresh" that serves a localStorage copy would be a lie.
  */
-export function resetAgendaCache(): void {
+export function resetAgendaCache(mode?: SourceMode): void {
+  if (mode === 'espn') {
+    providerRequestCache.clear(ESPN_AGENDA_CACHE_PREFIX)
+    clearAgendaStorage('espn')
+    return
+  }
+  if (mode === 'curated') {
+    providerRequestCache.clear(CURATED_AGENDA_CACHE_PREFIX)
+    clearAgendaStorage('curated')
+    return
+  }
   providerRequestCache.clear()
   clearAgendaStorage()
 }

@@ -1,18 +1,25 @@
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { SourceMode } from '@/types/football'
+import { SourceModeToggle } from '@/components/SourceModeToggle'
 
 function Header({
   className,
   onRefresh,
   isRefreshing = false,
   isCoolingDown = false,
+  sourceMode = 'curated',
+  onSourceModeChange,
 }: {
   className?: string
-  /** Manual freshness override (Option C): busts both caches and refetches. */
+  /** Manual freshness override (Option C): busts the ACTIVE Source Mode's caches and refetches. */
   onRefresh?: () => void
   isRefreshing?: boolean
   /** Pacer cooldown: refresh fired recently; button rests to protect quota. */
   isCoolingDown?: boolean
+  /** Active Source Mode rendered by the agenda below (CONTEXT.md). */
+  sourceMode?: SourceMode
+  onSourceModeChange?: (mode: SourceMode) => void
 }) {
   const refreshBlocked = isRefreshing || isCoolingDown
   return (
@@ -32,6 +39,9 @@ function Header({
           />
         </div>
         <div className="flex items-center gap-3 text-sm text-muted">
+          {onSourceModeChange && (
+            <SourceModeToggle mode={sourceMode} onChange={onSourceModeChange} />
+          )}
           {onRefresh && (
             <button
               type="button"

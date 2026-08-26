@@ -1,13 +1,16 @@
 import type { Match, ScoredMatch } from '@/types/football'
+import type { SourceMode } from '@/types/football'
 
 /**
- * localStorage-backed persistence for per-date agendas.
+ * localStorage-backed persistence for per-date agendas, namespaced per
+ * Source Mode so the Curated and ESPN pipelines can never read each
+ * other's snapshots.
  *
  * Purpose: make reloads free. A page reload wipes the in-memory request
  * cache; without persistence every revisit re-burns provider quota for
- * data we already had. Snapshots are written through by the orchestrator
- * on every successful fetch and carry their own expiry, so freshness
- * rules stay in exactly one place (the orchestrator's TTL policy).
+ * data we already had. Snapshots are written through by each mode's
+ * orchestrator on every successful fetch and carry their own expiry, so
+ * freshness rules stay in exactly one place (the shared TTL policy).
  *
  * Storage is optional by design: node tests and privacy modes fall back
  * to a process-local store with identical semantics. Serialization is
@@ -15,7 +18,7 @@ import type { Match, ScoredMatch } from '@/types/football'
  * real Date after revival — scoring and sorting depend on it.
  */
 
-const KEY_PREFIX = 'tfp:agenda:v1:'
+const KEY_PREFIX = 'tfp:agenda:v2:'
 
 interface KeyValueStore {
   getItem(key: string): string | null
@@ -115,6 +118,7 @@ export function saveAgenda(
   snapshot: AgendaSnapshot,
   ttlMs: number,
   now: number = Date.now(),
+  mode: SourceMode = 'curated',
 ): void {
   const stored: StoredAgenda = {
     savedAt: now,
@@ -126,7 +130,7 @@ export function saveAgenda(
     providerNotices: [...snapshot.providerNotices],
   }
   try {
-    store().setItem(KEY_PREFIX + dateKey, JSON.stringify(stored))
+    store().setItem(keyFor(dateKey, mode), JSON.stringify(stored))
   } catch {
     // Persistence is best-effort; the in-memory cache still covers the session.
   }
@@ -140,10 +144,11 @@ export function saveAgenda(
 export function loadFreshAgenda(
   dateKey: string,
   now: number = Date.now(),
+  mode: SourceMode = 'curated',
 ): AgendaSnapshot | null {
   let raw: string | null = null
   try {
-    raw = store().getItem(KEY_PREFIX + dateKey)
+    raw = store().getItem(keyFor(dateKey, mode))
   } catch {
     return null
   }
@@ -174,7 +179,7 @@ export function loadFreshAgenda(
     return { matches, providerNotices: [...parsed.providerNotices] }
   } catch {
     try {
-      store().removeItem(KEY_PREFIX + dateKey)
+      store().removeItem(keyFor(dateKey, mode))
     } catch {
       // ignore
     }
@@ -182,11 +187,16 @@ export function loadFreshAgenda(
   }
 }
 
-/** Drop ALL persisted agendas (manual refresh semantics: force network). */
-export function clearAgendaStorage(): void {
+function keyFor(dateKey: string, mode: SourceMode): string {
+  return `${KEY_PREFIX}${mode}:${dateKey}`
+}
+
+/** Drop persisted agendas — one Source Mode, or every mode when omitted. */
+export function clearAgendaStorage(mode?: SourceMode): void {
+  const sweepPrefix = mode ? `${KEY_PREFIX}${mode}:` : KEY_PREFIX
   try {
     for (const key of store().keys()) {
-      if (key.startsWith(KEY_PREFIX)) store().removeItem(key)
+      if (key.startsWith(sweepPrefix)) store().removeItem(key)
     }
   } catch {
     // best-effort

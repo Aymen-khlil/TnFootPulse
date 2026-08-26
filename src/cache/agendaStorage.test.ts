@@ -81,12 +81,29 @@ describe('agendaStorage — persistence semantics', () => {
   it('treats corrupt entries as absent and evicts them', () => {
     const backing = resetStoreToMemory()
 
-    const key = 'tfp:agenda:v1:2026-08-26'
+    const key = 'tfp:agenda:v2:curated:2026-08-26'
     backing.set(key, '{not-json-at-all')
 
     expect(loadFreshAgenda('2026-08-26', NOW)).toBeNull()
     // The bad entry was evicted so it cannot wedge the date forever.
     expect(backing.has(key)).toBe(false)
+  })
+
+  it('namespaces snapshots per Source Mode so pipelines never collide', () => {
+    const snapshotA = { matches: [scored('m1', '2026-08-26T18:00:00Z')], providerNotices: [] }
+    const snapshotB = { matches: [scored('m2', '2026-08-26T19:00:00Z')], providerNotices: ['espn'] }
+
+    saveAgenda('2026-08-26', snapshotA, 3 * HOUR, NOW, 'curated')
+    saveAgenda('2026-08-26', snapshotB, 3 * HOUR, NOW, 'espn')
+
+    expect(loadFreshAgenda('2026-08-26', NOW, 'curated')?.matches[0].match.id).toBe('m1')
+    expect(loadFreshAgenda('2026-08-26', NOW, 'espn')?.matches[0].match.id).toBe('m2')
+    // An unknown mode reads nothing — never silently falls back.
+    expect(loadFreshAgenda('2026-08-26', NOW, 'unknown' as never)).toBeNull()
+
+    clearAgendaStorage()
+    expect(loadFreshAgenda('2026-08-26', NOW, 'curated')).toBeNull()
+    expect(loadFreshAgenda('2026-08-26', NOW, 'espn')).toBeNull()
   })
 
   it('clearAgendaStorage drops every persisted date but nothing else survives a bad write', () => {

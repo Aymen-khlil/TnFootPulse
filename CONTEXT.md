@@ -53,8 +53,8 @@ _Avoid_: provider name (when referring to the internal identity)
 ### Sources
 
 **Source Mode**:
-Which exclusive data pipeline produces the visible agenda. Exactly one mode is active at a time: Curated Mode (football-data.org primary, API-Football for its exclusive competitions and backup fill) or ESPN Mode (an unofficial, no-SLA ESPN feed under experiment). Both modes render the same UI and score matches with the same Pulse Score.
-_Avoid_: data toggle, API switcher, third provider (ESPN is not merged into the Curated pipeline)
+Which exclusive data pipeline produces the visible agenda. Exactly one mode is active at a time: Curated Mode (football-data.org primary, API-Football for its exclusive competitions and backup fill) or ESPN Mode (an unofficial, no-SLA ESPN feed under experiment). Both modes render the same UI and score matches with the same Pulse Score. Their scopes differ by intent: Curated Mode is opinionated and Tunisia-first; ESPN Mode trades that focus for broad multi-confederation coverage — including regions the curated pipeline cannot see, but with no Tunisian football at all.
+_Avoid_: data toggle, API switcher, third provider (ESPN is not merged into the Curated pipeline), world mode
 
 **Experimental Source**:
 A source kept outside the Curated pipeline because it is unofficial, undocumented, or without availability guarantees. An Experimental Source powers only its own Source Mode, may break without notice, and its failure must never degrade Curated Mode.

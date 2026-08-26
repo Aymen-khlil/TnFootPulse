@@ -12,6 +12,7 @@ import { MatchDetailsDialog } from '@/components/MatchDetailsDialog'
 import { AgendaSkeleton } from '@/components/MatchCardSkeleton'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { EspnModeFallback } from '@/components/EspnModeFallback'
 
 function Home() {
   const {
@@ -23,6 +24,8 @@ function Home() {
     error,
     retry,
     isRefreshCoolingDown,
+    sourceMode,
+    setSourceMode,
   } = useMatches()
 
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
@@ -52,6 +55,8 @@ function Home() {
         onRefresh={retry}
         isRefreshing={isLoading}
         isCoolingDown={isRefreshCoolingDown}
+        sourceMode={sourceMode}
+        onSourceModeChange={setSourceMode}
       />
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-8">
         <section>
@@ -96,6 +101,11 @@ function Home() {
 
         {isLoading ? (
           <AgendaSkeleton />
+        ) : error && sourceMode === 'espn' ? (
+          <EspnModeFallback
+            onBackToCurated={() => setSourceMode('curated')}
+            onRetry={retry}
+          />
         ) : error ? (
           <ErrorState error={error} onRetry={retry} />
         ) : scoredMatches.length === 0 ? (
