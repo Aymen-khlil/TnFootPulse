@@ -5,12 +5,16 @@ function Header({
   className,
   onRefresh,
   isRefreshing = false,
+  isCoolingDown = false,
 }: {
   className?: string
-  /** Manual freshness override (Option C): busts the agenda cache and refetches. */
+  /** Manual freshness override (Option C): busts both caches and refetches. */
   onRefresh?: () => void
   isRefreshing?: boolean
+  /** Pacer cooldown: refresh fired recently; button rests to protect quota. */
+  isCoolingDown?: boolean
 }) {
+  const refreshBlocked = isRefreshing || isCoolingDown
   return (
     <header
       className={cn(
@@ -32,9 +36,9 @@ function Header({
             <button
               type="button"
               onClick={onRefresh}
-              disabled={isRefreshing}
+              disabled={refreshBlocked}
               aria-label="Refresh fixtures"
-              title="Refresh fixtures"
+              title={isCoolingDown ? 'Refresh is cooling down' : 'Refresh fixtures'}
               className="rounded-lg border border-border p-1.5 text-muted transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             >
               <RefreshCw

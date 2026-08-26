@@ -5,10 +5,23 @@ import {
   providerRequestCache,
 } from '@/cache/providerCache'
 import {
-  API_FOOTBALL_MAX_DAYS_AHEAD,
+  loadFreshAgenda,
+  saveAgenda,
+  clearAgendaStorage,
+} from '@/cache/agendaStorage'
+import {
+  apiFootballPacer,
+  footballDataPacer,
+  ProviderBudgetError,
+} from '@/services/providerPacer'
+import {
   AGENDA_TTL_EMPTY_MS,
   AGENDA_TTL_FRESH_MS,
+  AGENDA_TTL_LIVE_MS,
+  API_FOOTBALL_MAX_DAYS_AHEAD,
   FOOTBALL_DATA_RANGE_DAYS,
+  LIVE_WINDOW_AFTER_MINUTES,
+  LIVE_WINDOW_BEFORE_MINUTES,
 } from '@/config/limits'
 import {
   fetchFootballDataMatchesInRange,
@@ -25,9 +38,17 @@ export type AgendaDeps = {
 }
 
 export const defaultAgendaDeps: AgendaDeps = {
-  fetchFootballData: ({ from, to }) =>
-    fetchFootballDataMatchesInRange({ fromKey: from, toKey: to }),
-  fetchApiFootball: (dateKey) => fetchApiFootballFixturesByDate({ dateKey }),
+  // The budget guards live HERE — the outermost network seam — so the
+  // transports stay pure and every real request (initial load, prefetch,
+  // revalidation tick) passes exactly one admission gate.
+  fetchFootballData: ({ from, to }) => {
+    footballDataPacer.admit()
+    return fetchFootballDataMatchesInRange({ fromKey: from, toKey: to })
+  },
+  fetchApiFootball: (dateKey) => {
+    apiFootballPacer.admit()
+    return fetchApiFootballFixturesByDate({ dateKey })
+  },
 }
 
 export type AgendaResult = {
@@ -44,9 +65,15 @@ export type AgendaResult = {
  *
  * Results are cached per date (`agenda:<key>`) on top of the
  * provider-scoped request caches, so revisiting a date costs nothing.
- * Entries carry a freshness window (Option C): fresh agendas live 3h,
- * empty ones 10min — providers can retract or release fixtures and the
- * agenda heals without user action.
+ * Successful agendas are also persisted (localStorage) and re-hydrated
+ * after a page reload, making reloads quota-free within their freshness
+ * window.
+ *
+ * Freshness is live-aware (Option C + score policy): empty agendas
+ * recheck after 10min; otherwise the entry lives 3h, EXCEPT it never
+ * overshoots into a kickoff's live window — once a window is active the
+ * cadence tightens to 12min so scores creep forward without polling AF
+ * or burning fd.org's tank.
  */
 export async function getAgendaForDate(
   dateKey: string,
@@ -55,24 +82,39 @@ export async function getAgendaForDate(
   return providerRequestCache.run(
     `agenda:${dateKey}`,
     async () => {
+    // Reload survival: a persisted snapshot inside its freshness window
+    // answers immediately — zero network, zero quota.
+    const stored = loadFreshAgenda(dateKey)
+    if (stored) {
+      return { matches: stored.matches, providerNotices: stored.providerNotices }
+    }
+
     // Week-aligned fd.org window: any two dates inside the same 7-day
     // block share ONE cached ranged request instead of refetching.
     const { from, to } = footballDataWindowFor(dateKey)
 
-    const attempts: Array<Promise<Match[]>> = []
     const failures: unknown[] = []
     const providerNotices: string[] = []
+    let fdFailure: unknown = null
 
     const fdJob = deps
       .fetchFootballData({ from, to })
       .catch((error: unknown) => {
+        // Daily-budget exhaustion is a planned pause, not a provider
+        // outage — degrade via notice, never as a thrown agenda error.
+        if (
+          error instanceof ProviderBudgetError &&
+          error.scope === 'daily'
+        ) {
+          providerNotices.push(
+            'football-data.org daily budget guard reached — European updates pause until tomorrow.',
+          )
+          return [] as Match[]
+        }
         failures.push(error)
-        providerNotices.push(
-          'European fixtures are unavailable right now (football-data.org).',
-        )
+        fdFailure = error
         return [] as Match[]
       })
-    attempts.push(fdJob)
 
     let afJob: Promise<Match[]> | null = null
     if (apiFootballWindowAllows(dateKey)) {
@@ -83,19 +125,39 @@ export async function getAgendaForDate(
           warnDev('API-Football rejected the date as outside the free-plan window.')
           return [] as Match[]
         }
+        if (error instanceof ProviderBudgetError && error.scope === 'daily') {
+          providerNotices.push(
+            'API-Football daily budget guard reached — Tunisian and cup updates pause until tomorrow.',
+          )
+          return [] as Match[]
+        }
         failures.push(error)
         providerNotices.push(
           'Tunisian and other league fixtures may be incomplete right now.',
         )
         return [] as Match[]
       })
-      attempts.push(afJob)
     }
 
     const [fdMatches, afMatches] = await Promise.all([
       fdJob,
       afJob ?? Promise.resolve([] as Match[]),
     ])
+
+    if (fdFailure !== null) {
+      if (afMatches.length > 0) {
+        // Backup path: API-Football's date response already carries the
+        // Euro leagues, so the agenda degrades to today+tomorrow coverage
+        // instead of going dark.
+        providerNotices.push(
+          'European fixtures are running on the backup source — today and tomorrow only.',
+        )
+      } else {
+        providerNotices.push(
+          'European fixtures are unavailable right now (football-data.org).',
+        )
+      }
+    }
 
     const combined = mergeMatches(fdMatches, afMatches)
 
@@ -104,7 +166,12 @@ export async function getAgendaForDate(
     // network-efficiency device, never as extra display content.
     const dayCombined = combined.filter((m) => m.tunisDateKey === dateKey)
 
-    if (dayCombined.length === 0 && failures.length === attempts.length && failures.length > 0) {
+    if (
+      dayCombined.length === 0 &&
+      failures.length === 1 + (afJob !== null ? 1 : 0)
+    ) {
+      // Every provider that was consulted failed — surface as a real
+      // error so the UI can offer retry.
       throw failures[0]
     }
     if (failures.length > 0) {
@@ -113,7 +180,7 @@ export async function getAgendaForDate(
       )
     }
 
-    return {
+    const result: AgendaResult = {
       matches: dayCombined
         .map((match) => ({ match, priority: calculatePriority(match) }))
         .sort(
@@ -123,8 +190,14 @@ export async function getAgendaForDate(
         ),
       providerNotices,
     }
+
+    // Persist with the SAME freshness policy the memory cache uses, so a
+    // reload resumes exactly where the session would have been.
+    const ttlMs = agendaTtlMs(result.matches)
+    saveAgenda(dateKey, result, ttlMs)
+    return result
     },
-    (result) => (result.matches.length > 0 ? AGENDA_TTL_FRESH_MS : AGENDA_TTL_EMPTY_MS),
+    (result) => agendaTtlMs(result.matches),
   )
 }
 
@@ -133,8 +206,52 @@ export function prefetchTomorrow(deps: AgendaDeps = defaultAgendaDeps): void {
   void getAgendaForDate(shiftDateKey(todayInTunis(), 1), deps).catch(() => {})
 }
 
+/**
+ * Manual-refresh semantics: wipe BOTH cache layers so the next load is a
+ * guaranteed network round-trip. Persisted snapshots are deliberately
+ * included — "refresh" that serves a localStorage copy would be a lie.
+ */
 export function resetAgendaCache(): void {
   providerRequestCache.clear()
+  clearAgendaStorage()
+}
+
+/**
+ * Test seam simulating a page reload: memory gone, persistence intact.
+ * The next `getAgendaForDate` must hydrate from storage, not network.
+ */
+export function resetAgendaMemoryCacheForTests(): void {
+  providerRequestCache.clear()
+}
+
+/**
+ * Live-aware freshness policy — single source for both cache layers.
+ *
+ *  - empty agenda → short empty-TTL (fixtures can land mid-day)
+ *  - any kickoff inside its live window (start−10min … +2h45) → tight
+ *    live cadence; scores update without polling AF
+ *  - otherwise: never overshoot INTO the next window — expire just as
+ *    it opens (floored at 30s) so the first live poll lands on time;
+ *    far-future windows simply clamp to the standard fresh TTL
+ */
+export function agendaTtlMs(matches: ScoredMatch[], now: number = Date.now()): number {
+  if (matches.length === 0) return AGENDA_TTL_EMPTY_MS
+
+  const before = LIVE_WINDOW_BEFORE_MINUTES * 60_000
+  const after = LIVE_WINDOW_AFTER_MINUTES * 60_000
+  let nextWindowStart = Number.POSITIVE_INFINITY
+
+  for (const { match } of matches) {
+    const start = match.kickoff.getTime() - before
+    const end = match.kickoff.getTime() + after
+    if (now >= start && now <= end) return AGENDA_TTL_LIVE_MS
+    if (start > now && start < nextWindowStart) nextWindowStart = start
+  }
+
+  if (nextWindowStart !== Number.POSITIVE_INFINITY) {
+    return Math.max(30_000, Math.min(AGENDA_TTL_FRESH_MS, nextWindowStart - now))
+  }
+  return AGENDA_TTL_FRESH_MS
 }
 
 /**

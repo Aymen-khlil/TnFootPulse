@@ -5,10 +5,22 @@ import type { ProviderId } from '@/types/football'
  * competition's internal identity, rating and owning provider meet.
  * Provider-specific ids live here and nowhere else.
  *
- * All API-Football ids were verified against the live directory on
- * 2026-08-25; football-data.org codes verified against its published
- * free-tier coverage list (Europa/Conference League are paid-only there
- * and therefore routed to API-Football).
+ * Routing model ("fd primary / AF exclusive + backup"):
+ *  - football-data.org owns everything its free tier covers (Euro leagues,
+ *    CL, Libertadores — LIB access verified live 2026-08-26). One ranged
+ *    request per week block covers all of them.
+ *  - API-Football owns the exclusives with no fd free-tier equivalent
+ *    (Tunisia, Saudi, CAF, Europa/Conference League) for today+tomorrow.
+ *  - Euro competitions ALSO carry apiFootballLeagueId so that, once those
+ *    leagues are subscribed on the AF dashboard, every existing AF
+ *    date-request returns them at ZERO extra cost — giving fd a silent
+ *    backup source. The AF normalizer drops unsubscribed ids gracefully,
+ *    so an unverified id can never break ingestion.
+ *
+ * fd codes verified against the published free-tier coverage list;
+ * AF ids below the marker were verified against the live directory on
+ * 2026-08-25. Backup ids marked "dashboard" take effect only after the
+ * corresponding league is subscribed in the AF dashboard.
  */
 
 export type CompetitionConfig = {
@@ -18,7 +30,7 @@ export type CompetitionConfig = {
   country: string
   rating: number
   provider: ProviderId
-  /** API-Football numeric league id (when provider === 'api-football'). */
+  /** API-Football numeric id — owning provider OR backup subscription. */
   apiFootballLeagueId?: number
   /** football-data.org competition code (when provider === 'football-data'). */
   footballDataCode?: string
@@ -27,20 +39,23 @@ export type CompetitionConfig = {
 export const DEFAULT_COMPETITION_SCORE = 6
 
 export const COMPETITION_CONFIGS: CompetitionConfig[] = [
-  // football-data.org (free tier)
-  { internalId: 'ucl', name: 'UEFA Champions League', country: 'World', rating: 30, provider: 'football-data', footballDataCode: 'CL' },
-  { internalId: 'premier-league', name: 'Premier League', country: 'England', rating: 25, provider: 'football-data', footballDataCode: 'PL' },
-  { internalId: 'la-liga', name: 'La Liga', country: 'Spain', rating: 25, provider: 'football-data', footballDataCode: 'PD' },
-  { internalId: 'serie-a', name: 'Serie A', country: 'Italy', rating: 24, provider: 'football-data', footballDataCode: 'SA' },
-  { internalId: 'bundesliga', name: 'Bundesliga', country: 'Germany', rating: 24, provider: 'football-data', footballDataCode: 'BL1' },
-  { internalId: 'ligue-1', name: 'Ligue 1', country: 'France', rating: 22, provider: 'football-data', footballDataCode: 'FL1' },
-  { internalId: 'primeira-liga', name: 'Primeira Liga', country: 'Portugal', rating: 19, provider: 'football-data', footballDataCode: 'PPL' },
-  { internalId: 'eredivisie', name: 'Eredivisie', country: 'Netherlands', rating: 18, provider: 'football-data', footballDataCode: 'DED' },
+  // football-data.org (free tier) — primary source; AF ids = backup route
+  { internalId: 'ucl', name: 'UEFA Champions League', country: 'World', rating: 30, provider: 'football-data', footballDataCode: 'CL', apiFootballLeagueId: 2 },
+  { internalId: 'premier-league', name: 'Premier League', country: 'England', rating: 25, provider: 'football-data', footballDataCode: 'PL', apiFootballLeagueId: 39 },
+  { internalId: 'la-liga', name: 'La Liga', country: 'Spain', rating: 25, provider: 'football-data', footballDataCode: 'PD', apiFootballLeagueId: 140 },
+  { internalId: 'serie-a', name: 'Serie A', country: 'Italy', rating: 24, provider: 'football-data', footballDataCode: 'SA', apiFootballLeagueId: 135 },
+  { internalId: 'bundesliga', name: 'Bundesliga', country: 'Germany', rating: 24, provider: 'football-data', footballDataCode: 'BL1', apiFootballLeagueId: 78 },
+  { internalId: 'ligue-1', name: 'Ligue 1', country: 'France', rating: 22, provider: 'football-data', footballDataCode: 'FL1', apiFootballLeagueId: 61 },
+  { internalId: 'primeira-liga', name: 'Primeira Liga', country: 'Portugal', rating: 19, provider: 'football-data', footballDataCode: 'PPL', apiFootballLeagueId: 94 },
+  { internalId: 'eredivisie', name: 'Eredivisie', country: 'Netherlands', rating: 18, provider: 'football-data', footballDataCode: 'DED', apiFootballLeagueId: 88 },
+  // NOTE: fd.org's Copa Libertadores code is CLI (verified live
+  // 2026-08-26; LIB returns 404 — their filter endpoint echoes unknown
+  // codes instead of rejecting them, which is why this was missed once).
+  { internalId: 'libertadores', name: 'CONMEBOL Libertadores', country: 'World', rating: 18, provider: 'football-data', footballDataCode: 'CLI' },
 
-  // API-Football (not available / not free on football-data.org)
+  // API-Football exclusives (not available / not free on football-data.org)
   { internalId: 'europa-league', name: 'UEFA Europa League', country: 'World', rating: 26, provider: 'api-football', apiFootballLeagueId: 3 },
   { internalId: 'conference-league', name: 'UEFA Europa Conference League', country: 'World', rating: 21, provider: 'api-football', apiFootballLeagueId: 848 },
-  { internalId: 'libertadores', name: 'CONMEBOL Libertadores', country: 'World', rating: 18, provider: 'api-football', apiFootballLeagueId: 13 },
   { internalId: 'saudi-pro-league', name: 'Saudi Pro League', country: 'Saudi Arabia', rating: 15, provider: 'api-football', apiFootballLeagueId: 307 },
   { internalId: 'tunisian-ligue-1', name: 'Ligue 1', country: 'Tunisia', rating: 14, provider: 'api-football', apiFootballLeagueId: 202 },
   { internalId: 'fa-cup', name: 'FA Cup', country: 'England', rating: 12, provider: 'api-football', apiFootballLeagueId: 45 },
